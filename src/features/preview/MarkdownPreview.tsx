@@ -1,0 +1,179 @@
+import { useEffect, useId, useState, type MouseEvent } from "react";
+import { Highlight, themes } from "prism-react-renderer";
+import ReactMarkdown from "react-markdown";
+import rehypeKatex from "rehype-katex";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import type { Components } from "react-markdown";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { extensionForLanguage } from "../export/codeBlocks";
+import { isTauriRuntime } from "../../services/desktop";
+
+interface MarkdownPreviewProps {
+  source: string;
+  imageResolver?: (source: string) => Promise<string>;
+}
+
+function MermaidBlock({ source }: { source: string }) {
+  const generatedId = useId().replaceAll(":", "");
+  const [svg, setSvg] = useState<string>();
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    async function renderDiagram() {
+      try {
+        const { default: mermaid } = await import("mermaid");
+        mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "neutral" });
+        const output = await mermaid.render(`lumenmark-${generatedId}`, source);
+        if (active) setSvg(output.svg);
+      } catch {
+        if (active) setError(true);
+      }
+    }
+    void renderDiagram();
+    return () => {
+      active = false;
+    };
+  }, [generatedId, source]);
+
+  if (error) {
+    return (
+      <div className="diagram-error">
+        <p>Unable to render this diagram.</p>
+        <pre>{source}</pre>
+      </div>
+    );
+  }
+  if (!svg) return <div className="diagram-loading">Rendering diagram...</div>;
+  return <div className="mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg }} />;
+}
+
+function safeFileLabel(language: string, metadata: string | undefined): string {
+  const requested = metadata?.match(/(?:^|\s)file=(?:"([^"]+)"|'([^']+)'|([^\s]+))/);
+  const candidate = requested?.[1] ?? requested?.[2] ?? requested?.[3];
+  if (candidate && !candidate.includes("/") && !candidate.includes("\\") && !candidate.includes("..")) {
+    return candidate;
+  }
+  return `snippet.${extensionForLanguage(language)}`;
+}
+
+function CodeBlock({
+  language,
+  metadata,
+  source,
+}: {
+  language: string;
+  metadata?: string;
+  source: string;
+}) {
+  const filename = safeFileLabel(language, metadata);
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    await navigator.clipboard.writeText(source);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1000);
+  }
+
+  return (
+    <section className="code-panel">
+      <header>
+        <span>{filename}</span>
+        <button type="button" aria-label={`Copy ${filename}`} onClick={() => void copy()}>
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </header>
+      <Highlight theme={themes.github} code={source.replace(/\n$/, "")} language={language}>
+        {({ className, style, tokens, getLineProps, getTokenProps }) => (
+          <pre className={className} style={style}>
+            {tokens.map((line, index) => (
+              <div key={index} {...getLineProps({ line })}>
+                <span className="line-number">{index + 1}</span>
+                {line.map((token, tokenIndex) => (
+                  <span key={tokenIndex} {...getTokenProps({ token })} />
+                ))}
+              </div>
+            ))}
+          </pre>
+        )}
+      </Highlight>
+    </section>
+  );
+}
+
+function WorkspaceImage({
+  source,
+  alt,
+  resolver,
+}: {
+  source: string;
+  alt: string;
+  resolver?: (source: string) => Promise<string>;
+}) {
+  const [resolved, setResolved] = useState(resolver ? undefined : source);
+  const [blocked, setBlocked] = useState(false);
+
+  useEffect(() => {
+    if (!resolver) return;
+    let active = true;
+    resolver(source)
+      .then((value) => {
+        if (active) setResolved(value);
+      })
+      .catch(() => {
+        if (active) setBlocked(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [resolver, source]);
+
+  if (blocked) return <span className="image-blocked">Image blocked</span>;
+  return resolved ? <img src={resolved} alt={alt} /> : <span className="image-loading">Loading image...</span>;
+}
+
+export function MarkdownPreview({ source, imageResolver }: MarkdownPreviewProps) {
+  const components: Components = {
+    code({ className, children, node }) {
+      const match = /language-([^\s]+)/.exec(className ?? "");
+      if (!match) return <code className={className}>{children}</code>;
+      const language = match[1].toLowerCase();
+      const value = String(children);
+      if (language === "mermaid") return <MermaidBlock source={value.replace(/\n$/, "")} />;
+      const metadata = (node as { data?: { meta?: string } } | undefined)?.data?.meta;
+      return <CodeBlock language={language} metadata={metadata} source={value} />;
+    },
+    a({ href, children }) {
+      const isExternal = Boolean(href && /^https?:\/\//i.test(href));
+      async function openExternal(event: MouseEvent<HTMLAnchorElement>) {
+        if (!isExternal || !href) return;
+        event.preventDefault();
+        if (!window.confirm(`Open this link in your browser?\n\n${href}`)) return;
+        if (isTauriRuntime()) await openUrl(href);
+        else window.open(href, "_blank", "noopener,noreferrer");
+      }
+      return (
+        <a href={href} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noopener noreferrer" : undefined} onClick={(event) => void openExternal(event)}>
+          {children}
+        </a>
+      );
+    },
+    img({ src, alt }) {
+      const safe = src && !/^(?:[a-z]+:|\/|\\)/i.test(src) && (imageResolver || !src.split(/[\\/]/).includes(".."));
+      return safe ? <WorkspaceImage source={src} alt={alt ?? ""} resolver={imageResolver} /> : <span className="image-blocked">Image blocked</span>;
+    },
+  };
+
+  return (
+    <article className="markdown-preview">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+        components={components}
+      >
+        {source}
+      </ReactMarkdown>
+    </article>
+  );
+}
