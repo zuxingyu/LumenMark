@@ -12,7 +12,7 @@ vi.mock("mermaid", () => ({
 describe("MarkdownPreview", () => {
   it("renders GFM content, math, and highlighted source without executing HTML", () => {
     render(
-      <MarkdownPreview
+      <MarkdownPreview locale="zh-CN"
         source={[
           "# Release Notes",
           "",
@@ -33,8 +33,9 @@ describe("MarkdownPreview", () => {
 
     expect(screen.getByRole("heading", { name: "Release Notes" })).toBeVisible();
     expect(screen.getByRole("table")).toBeVisible();
-    expect(screen.getByText("main.py")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Copy main.py" })).toBeVisible();
+    expect(screen.getByText("Python")).toBeVisible();
+    expect(screen.getByRole("button", { name: "复制 Python 代码" })).toBeVisible();
+    expect(screen.queryByText("main.py")).not.toBeInTheDocument();
     expect(document.querySelector("script")).toBeNull();
     expect(document.querySelector(".katex")).not.toBeNull();
   });

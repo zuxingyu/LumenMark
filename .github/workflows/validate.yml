@@ -1,4 +1,4 @@
-name: Windows Build
+name: Validate
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  build-windows:
+  verify-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -23,13 +23,9 @@ jobs:
         run: npm ci
       - name: Test frontend
         run: npm run test
+      - name: Build frontend
+        run: npm run build
       - name: Test Rust commands
         run: cargo test --manifest-path src-tauri/Cargo.toml
-      - name: Build NSIS installer
-        run: npm run tauri build
-      - name: Upload installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: LumenMark-windows-x64-nsis
-          path: src-tauri/target/release/bundle/nsis/*.exe
-
+      - name: Compile Windows desktop application
+        run: npm run tauri build -- --no-bundle

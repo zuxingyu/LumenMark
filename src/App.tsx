@@ -2,9 +2,10 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Sidebar } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
 import { UnsavedDialog } from "./components/UnsavedDialog";
-import { createSession, editSession, markSaved, changeMode } from "./features/document/session";
-import { createDemoApi, exportFiles, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
-import type { DocumentSession, WorkspaceEntry, WorkspaceInfo } from "./types";
+import { changeMode, createSession, editSession, markSaved } from "./features/document/session";
+import { initialLocale, LOCALE_KEY, messages, RECENT_WORKSPACES_KEY, type Locale } from "./i18n";
+import { createDemoApi, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
+import type { DocumentContext, DocumentSession, RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "./types";
 
 interface AppProps {
   api?: DesktopApi;
@@ -15,6 +16,15 @@ type PendingAction = (() => Promise<void>) | null;
 const MarkdownPreview = lazy(() => import("./features/preview/MarkdownPreview").then((module) => ({ default: module.MarkdownPreview })));
 const EditorPanel = lazy(() => import("./components/EditorPanel").then((module) => ({ default: module.EditorPanel })));
 
+function loadRecentWorkspaces(): RecentWorkspace[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENT_WORKSPACES_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function mapEntryTree(entries: WorkspaceEntry[], relativePath: string, update: (entry: WorkspaceEntry) => WorkspaceEntry): WorkspaceEntry[] {
   return entries.map((entry) => {
     if (entry.relativePath === relativePath) return update(entry);
@@ -23,44 +33,55 @@ function mapEntryTree(entries: WorkspaceEntry[], relativePath: string, update: (
   });
 }
 
-function removeEntry(entries: WorkspaceEntry[], relativePath: string): WorkspaceEntry[] {
-  return entries
-    .filter((entry) => entry.relativePath !== relativePath)
-    .map((entry) => entry.children ? { ...entry, children: removeEntry(entry.children, relativePath) } : entry);
-}
-
 export function App({ api: providedApi }: AppProps) {
   const api = useMemo(() => providedApi ?? (isTauriRuntime() ? tauriApi : createDemoApi()), [providedApi]);
+  const [locale, setLocale] = useState<Locale>(initialLocale);
+  const labels = messages[locale];
+  const [recentWorkspaces, setRecentWorkspaces] = useState<RecentWorkspace[]>(loadRecentWorkspaces);
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
+  const [context, setContext] = useState<DocumentContext | null>(null);
   const [entries, setEntries] = useState<WorkspaceEntry[]>([]);
   const [session, setSession] = useState<DocumentSession | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const [status, setStatus] = useState("Ready");
+  const [status, setStatus] = useState<string>(() => messages[initialLocale()].ready);
   const [error, setError] = useState<string>();
   const allowClose = useRef(false);
+
+  useEffect(() => {
+    localStorage.setItem(RECENT_WORKSPACES_KEY, JSON.stringify(recentWorkspaces));
+  }, [recentWorkspaces]);
+
+  function changeLocale() {
+    const next = locale === "zh-CN" ? "en-US" : "zh-CN";
+    localStorage.setItem(LOCALE_KEY, next);
+    setLocale(next);
+    setStatus(messages[next].ready);
+  }
 
   const attempt = useCallback(async (action: () => Promise<void>) => {
     try {
       setError(undefined);
       await action();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      const detail = reason instanceof Error ? reason.message : String(reason);
+      setError(`${labels.operationFailed}: ${detail}`);
     }
-  }, []);
+  }, [labels.operationFailed]);
 
   const saveDocument = useCallback(async (): Promise<boolean> => {
-    if (!workspace || !session) return false;
+    if (!context || !session) return false;
     try {
-      await api.writeMarkdownFile(workspace.root, session.path, session.sourceText);
+      await api.writeMarkdownFile(context.root, session.path, session.sourceText);
       setSession((current) => (current ? markSaved(current) : current));
-      setStatus(`Saved ${session.path}`);
+      setStatus(locale === "zh-CN" ? `已保存 ${session.path}` : `Saved ${session.path}`);
       setError(undefined);
       return true;
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      const detail = reason instanceof Error ? reason.message : String(reason);
+      setError(`${labels.operationFailed}: ${detail}`);
       return false;
     }
-  }, [api, session, workspace]);
+  }, [api, context, labels.operationFailed, locale, session]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -71,7 +92,7 @@ export function App({ api: providedApi }: AppProps) {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [saveDocument, session?.isDirty]);
+  }, [saveDocument, session]);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -83,7 +104,7 @@ export function App({ api: providedApi }: AppProps) {
         event.preventDefault();
         setPendingAction(() => async () => {
           allowClose.current = true;
-          await currentWindow.destroy();
+          await currentWindow.close();
         });
       }).then((stop) => {
         unlisten = stop;
@@ -97,15 +118,61 @@ export function App({ api: providedApi }: AppProps) {
     else void attempt(action);
   }
 
+  function addRecentWorkspace(selected: WorkspaceInfo) {
+    setRecentWorkspaces((current) => [
+      selected,
+      ...current.filter((entry) => entry.root !== selected.root),
+    ]);
+  }
+
+  function activateWorkspace(selected: WorkspaceInfo) {
+    return async () => {
+      const nextEntries = await api.listWorkspaceEntries(selected.root);
+      setWorkspace(selected);
+      setContext({ kind: "workspace", root: selected.root, workspaceName: selected.name });
+      setEntries(nextEntries);
+      setSession(null);
+      setStatus(locale === "zh-CN" ? `已打开 ${selected.name}` : `Opened ${selected.name}`);
+    };
+  }
+
   function openWorkspace() {
     afterDirty(async () => {
       const selected = await api.selectWorkspace();
       if (!selected) return;
-      const nextEntries = await api.listWorkspaceEntries(selected.root);
-      setWorkspace(selected);
-      setEntries(nextEntries);
-      setSession(null);
-      setStatus(`Opened ${selected.name}`);
+      addRecentWorkspace(selected);
+      await activateWorkspace(selected)();
+    });
+  }
+
+  function openRecentWorkspace(selected: RecentWorkspace) {
+    afterDirty(activateWorkspace(selected));
+  }
+
+  function removeWorkspace(selected: RecentWorkspace) {
+    const remove = async () => {
+      setRecentWorkspaces((current) => current.filter((entry) => entry.root !== selected.root));
+      if (workspace?.root === selected.root) {
+        setWorkspace(null);
+        setContext(null);
+        setEntries([]);
+        setSession(null);
+      }
+      setStatus(locale === "zh-CN" ? `已移除 ${selected.name} 的关联` : `Removed ${selected.name}`);
+    };
+    if (workspace?.root === selected.root) afterDirty(remove);
+    else void remove();
+  }
+
+  function openFile() {
+    afterDirty(async () => {
+      const selected = await api.selectMarkdownFile();
+      if (!selected) return;
+      setWorkspace(null);
+      setEntries([]);
+      setContext({ kind: "single-file", root: selected.root });
+      setSession(createSession(selected.relativePath, selected.content));
+      setStatus(locale === "zh-CN" ? `正在阅读 ${selected.name}` : `Reading ${selected.name}`);
     });
   }
 
@@ -128,102 +195,79 @@ export function App({ api: providedApi }: AppProps) {
     afterDirty(async () => {
       const document = await api.readMarkdownFile(workspace.root, entry.relativePath);
       setSession(createSession(document.relativePath, document.content));
-      setStatus(`Reading ${entry.name}`);
+      setStatus(locale === "zh-CN" ? `正在阅读 ${entry.name}` : `Reading ${entry.name}`);
     });
   }
 
   function createDocument() {
     if (!workspace) return;
     afterDirty(async () => {
-      const requested = window.prompt("New Markdown document name", "untitled.md");
+      const requested = window.prompt(labels.createPrompt, "untitled.md");
       if (!requested) return;
       const filename = requested.endsWith(".md") ? requested : `${requested}.md`;
       const entry = await api.createMarkdownFile(workspace.root, filename);
       setEntries((current) => [...current, entry]);
       const document = await api.readMarkdownFile(workspace.root, entry.relativePath);
       setSession(createSession(document.relativePath, document.content));
-      setStatus(`Created ${entry.name}`);
+      setStatus(locale === "zh-CN" ? `已创建 ${entry.name}` : `Created ${entry.name}`);
     });
   }
 
   function renameDocument() {
     if (!workspace || !session) return;
     const oldName = session.path.split("/").at(-1) ?? session.path;
-    const requested = window.prompt("Rename Markdown document", oldName);
+    const requested = window.prompt(labels.renamePrompt, oldName);
     if (!requested || requested === oldName) return;
     const nextName = requested.endsWith(".md") ? requested : `${requested}.md`;
-    const parent = session.path.includes("/") ? `${session.path.slice(0, session.path.lastIndexOf("/") + 1)}` : "";
+    const parent = session.path.includes("/") ? session.path.slice(0, session.path.lastIndexOf("/") + 1) : "";
     const nextPath = `${parent}${nextName}`;
     void attempt(async () => {
       const renamed = await api.renameMarkdownEntry(workspace.root, session.path, nextPath);
       setEntries((current) => mapEntryTree(current, session.path, () => renamed));
       setSession((current) => current ? { ...current, path: renamed.relativePath } : current);
-      setStatus(`Renamed to ${renamed.name}`);
+      setStatus(locale === "zh-CN" ? `已重命名为 ${renamed.name}` : `Renamed to ${renamed.name}`);
     });
-  }
-
-  function deleteDocument() {
-    if (!workspace || !session || !window.confirm(`Delete ${session.path}? This cannot be undone.`)) return;
-    void attempt(async () => {
-      await api.deleteMarkdownEntry(workspace.root, session.path);
-      setEntries((current) => removeEntry(current, session.path));
-      setSession(null);
-      setStatus("Document deleted");
-    });
-  }
-
-  async function exportCode() {
-    if (!session) return;
-    const { buildExportItems } = await import("./features/export/codeBlocks");
-    const items = buildExportItems(session.sourceText);
-    if (items.length === 0) {
-      setStatus("No fenced code blocks found");
-      return;
-    }
-    const directory = await api.chooseExportDirectory();
-    if (!directory) return;
-    if (!window.confirm(`Export ${items.length} code blocks?\n\n${items.map((item) => item.resolvedFileName).join("\n")}`)) return;
-    const result = await api.exportCodeBlocks(directory, exportFiles(items), false);
-    if (result.conflicts.length > 0 && window.confirm(`Overwrite existing files?\n\n${result.conflicts.join("\n")}`)) {
-      const conflicts = items.filter((item) => result.conflicts.includes(item.resolvedFileName));
-      const overwritten = await api.exportCodeBlocks(directory, exportFiles(conflicts), true);
-      result.written.push(...overwritten.written);
-    }
-    setStatus(`Exported ${result.written.length} files${result.rejected.length ? `; rejected ${result.rejected.length}` : ""}`);
   }
 
   return (
     <div className="app-shell">
       <Toolbar
+        labels={labels}
         hasWorkspace={Boolean(workspace)}
         hasDocument={Boolean(session)}
         dirty={Boolean(session?.isDirty)}
         mode={session?.mode ?? "preview"}
-        onOpen={openWorkspace}
+        onOpenFile={openFile}
+        onOpenFolder={openWorkspace}
         onNew={createDocument}
         onSave={() => void saveDocument()}
         onToggleMode={() => setSession((current) => current ? changeMode(current, current.mode === "preview" ? "edit" : "preview") : current)}
-        onExport={() => void attempt(exportCode)}
+        onToggleLocale={changeLocale}
       />
       <div className="workspace-layout">
         <Sidebar
+          labels={labels}
           workspace={workspace}
+          recentWorkspaces={recentWorkspaces}
           entries={entries}
-          activePath={session?.path}
+          activePath={workspace ? session?.path : undefined}
           onSelect={selectEntry}
+          onSelectWorkspace={openRecentWorkspace}
+          onRemoveWorkspace={removeWorkspace}
           onRename={renameDocument}
-          onDelete={deleteDocument}
         />
         <main className="document-surface">
-          {session ? (
-            <Suspense fallback={<div className="surface-loading">Loading document...</div>}>
+          {session && context ? (
+            <Suspense fallback={<div className="surface-loading">{labels.loading}</div>}>
               {session.mode === "preview" ? (
                 <MarkdownPreview
+                  locale={locale}
                   source={session.sourceText}
-                  imageResolver={(source) => api.readWorkspaceAsset(workspace!.root, session.path, source)}
+                  imageResolver={(source) => api.readWorkspaceAsset(context.root, session.path, source)}
                 />
               ) : (
                 <EditorPanel
+                  labels={labels}
                   path={session.path}
                   value={session.sourceText}
                   onChange={(value) => setSession((current) => current ? editSession(current, value) : current)}
@@ -234,18 +278,22 @@ export function App({ api: providedApi }: AppProps) {
             <section className="welcome">
               <div className="welcome-mark">L</div>
               <h1>LumenMark</h1>
-              <p>Open a Markdown workspace to read and edit technical documentation with formulas, diagrams, and exportable code.</p>
-              <button className="primary" type="button" onClick={openWorkspace}>Open Folder</button>
+              <p>{labels.welcome}</p>
+              <div className="welcome-actions">
+                <button type="button" onClick={openFile}>{labels.openFile}</button>
+                <button className="primary" type="button" onClick={openWorkspace}>{labels.openFolder}</button>
+              </div>
             </section>
           )}
         </main>
       </div>
       <footer className="statusbar">
         <span>{status}</span>
-        {error ? <span className="error" role="alert">{error}</span> : <span>{session?.isDirty ? "Unsaved changes" : "Saved"}</span>}
+        {error ? <span className="error" role="alert">{error}</span> : <span>{session?.isDirty ? labels.unsaved : labels.saved}</span>}
       </footer>
       {pendingAction ? (
         <UnsavedDialog
+          labels={labels}
           onCancel={() => setPendingAction(null)}
           onDiscard={() => {
             const action = pendingAction;

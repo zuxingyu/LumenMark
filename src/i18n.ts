@@ -1,0 +1,95 @@
+export type Locale = "zh-CN" | "en-US";
+
+export const LOCALE_KEY = "lumenmark.locale";
+export const RECENT_WORKSPACES_KEY = "lumenmark.recentWorkspaces";
+
+export const messages = {
+  "zh-CN": {
+    openFile: "打开文件",
+    openFolder: "打开文件夹",
+    newDocument: "新建",
+    save: "保存",
+    edit: "编辑",
+    preview: "预览",
+    changeLanguage: "English",
+    workspace: "工作区",
+    recentWorkspaces: "最近工作区",
+    remove: "移除",
+    rename: "重命名",
+    noWorkspace: "打开文件或文件夹以开始阅读 Markdown 文档。",
+    welcome: "阅读和编辑包含公式、流程图与代码片段的 Markdown 文档。",
+    ready: "就绪",
+    saved: "已保存",
+    unsaved: "未保存的更改",
+    loading: "正在加载文档...",
+    markdownSource: "Markdown 源码",
+    unsavedTitle: "保存更改？",
+    unsavedBody: "当前文档包含尚未保存的修改。",
+    cancel: "取消",
+    discard: "丢弃",
+    createPrompt: "新建 Markdown 文档名称",
+    renamePrompt: "重命名 Markdown 文档",
+    diagramError: "无法渲染此流程图。",
+    diagramLoading: "正在渲染流程图...",
+    imageBlocked: "图片已阻止",
+    imageLoading: "正在加载图片...",
+    copy: "复制",
+    copied: "已复制",
+    externalLink: "是否在系统浏览器中打开此链接？",
+    operationFailed: "操作失败",
+  },
+  "en-US": {
+    openFile: "Open File",
+    openFolder: "Open Folder",
+    newDocument: "New",
+    save: "Save",
+    edit: "Edit",
+    preview: "Preview",
+    changeLanguage: "中文",
+    workspace: "Workspace",
+    recentWorkspaces: "Recent Workspaces",
+    remove: "Remove",
+    rename: "Rename",
+    noWorkspace: "Open a file or folder to start reading Markdown documents.",
+    welcome: "Read and edit Markdown documents with formulas, diagrams, and code snippets.",
+    ready: "Ready",
+    saved: "Saved",
+    unsaved: "Unsaved changes",
+    loading: "Loading document...",
+    markdownSource: "Markdown source",
+    unsavedTitle: "Save your changes?",
+    unsavedBody: "This document contains changes that have not been saved.",
+    cancel: "Cancel",
+    discard: "Discard",
+    createPrompt: "New Markdown document name",
+    renamePrompt: "Rename Markdown document",
+    diagramError: "Unable to render this diagram.",
+    diagramLoading: "Rendering diagram...",
+    imageBlocked: "Image blocked",
+    imageLoading: "Loading image...",
+    copy: "Copy",
+    copied: "Copied",
+    externalLink: "Open this link in your browser?",
+    operationFailed: "Operation failed",
+  },
+} as const;
+
+export type Messages = { [Key in keyof typeof messages["zh-CN"]]: string };
+
+export function initialLocale(): Locale {
+  return localStorage.getItem(LOCALE_KEY) === "en-US" ? "en-US" : "zh-CN";
+}
+
+export function codeLanguageLabel(language: string): string {
+  const labels: Record<string, string> = {
+    bash: "Shell",
+    java: "Java",
+    json: "JSON",
+    py: "Python",
+    python: "Python",
+    sh: "Shell",
+    shell: "Shell",
+    sql: "SQL",
+  };
+  return labels[language.toLowerCase()] ?? (language || "Text");
+}

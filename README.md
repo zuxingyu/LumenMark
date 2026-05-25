@@ -1,14 +1,17 @@
 # LumenMark
 
-LumenMark is a Windows-first desktop Markdown workspace editor built with Tauri 2, React, TypeScript, and Rust. It reads and edits local `.md` files, renders technical content, and exports fenced code blocks without running them.
+[简体中文](./README_ZH.md)
 
-## MVP Features
+LumenMark is a local Markdown reader and editor for Windows 10/11 x64 and macOS Apple Silicon, built with Tauri 2, React, TypeScript, and Rust.
 
-- Open a local folder and browse nested Markdown documents in a desktop sidebar.
-- Switch between clean preview and CodeMirror source editing; save manually with `Ctrl+S`.
-- Render GFM tables and task lists, KaTeX math, Mermaid diagrams, and highlighted code blocks.
-- Export every fenced code block from a document, supporting `file=<name>` metadata or safe generated names.
-- Reject workspace path escapes, unsafe exported file names, raw HTML execution, and untrusted local image reads.
+## Features
+
+- Open a single `.md` file or a folder workspace; remove recent-folder associations without deleting files.
+- Switch between a clean preview and CodeMirror source editing; save manually with `Ctrl+S` or `Cmd+S`.
+- Render GFM tables and tasks, KaTeX math, Mermaid diagrams, and highlighted JSON, SQL, Shell, Python, and Java blocks.
+- Copy code blocks from preview; LumenMark never executes or exports code blocks.
+- Keep raw HTML inactive and restrict local images and document I/O to the selected safety root.
+- Start in Simplified Chinese with an in-app English switch.
 
 ## Run Locally
 
@@ -19,7 +22,7 @@ npm install
 npm run tauri dev
 ```
 
-For browser-only UI inspection, `npm run dev` uses a built-in demonstration workspace. Local filesystem actions are active in the Tauri application.
+For browser-only UI inspection, `npm run dev` uses a demonstration document and workspace. Filesystem dialogs are active in the Tauri desktop application.
 
 ## Verify
 
@@ -29,8 +32,13 @@ npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-The sample document at `examples/workspace/architecture.md` covers formulas, Mermaid, and JSON, SQL, Shell, Python, and Java export cases.
+The sample workspace at `examples/workspace/architecture.md` exercises formulas, Mermaid, and supported highlighted languages.
 
-## Windows Installer
+## Releases
 
-The GitHub Actions workflow in `.github/workflows/windows-build.yml` produces a Windows x64 NSIS installer artifact. The installer targets per-user installation and configures WebView2 bootstrap download through Tauri. The MVP is unsigned; public distribution should add Windows code signing.
+Pushing a version tag such as `v0.2.0` creates a GitHub Release with:
+
+- `LumenMark_<version>_x64-setup.exe` for Windows x64 (NSIS, per-user installation, WebView2 bootstrapper).
+- `LumenMark_<version>_aarch64.dmg` for macOS Apple Silicon.
+
+Version `v0.2.0` builds are unsigned test releases. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.

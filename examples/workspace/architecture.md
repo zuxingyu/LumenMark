@@ -1,6 +1,6 @@
 # Service Deployment Notes
 
-This sample confirms the primary LumenMark preview path: GitHub-flavored Markdown, formulas, diagrams, and exportable code.
+This sample confirms the primary LumenMark preview path: GitHub-flavored Markdown, formulas, diagrams, and copyable highlighted code.
 
 ## Capacity Planning
 
@@ -27,14 +27,14 @@ flowchart LR
 
 ## Configuration
 
-```json file=service.json
+```json
 {
   "name": "lumen-api",
   "replicas": 6
 }
 ```
 
-```sql file=healthcheck.sql
+```sql
 select service, status
 from deployments
 where environment = 'production';
@@ -42,23 +42,22 @@ where environment = 'production';
 
 ## Scripts
 
-```shell file=verify.sh
+```shell
 #!/usr/bin/env sh
 curl --fail https://service.example.test/health
 ```
 
-```python file=deploy.py
+```python
 import subprocess
 
 def deploy(environment: str) -> None:
     subprocess.run(["deploy", environment], check=True)
 ```
 
-```java file=HealthCheck.java
+```java
 public final class HealthCheck {
   public boolean ready() {
     return true;
   }
 }
 ```
-
