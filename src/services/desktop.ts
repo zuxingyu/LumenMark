@@ -1,25 +1,20 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CodeBlockExportItem, DocumentContent, ExportResult, WorkspaceEntry, WorkspaceInfo } from "../types";
+import type { DocumentContent, OpenedDocument, WorkspaceEntry, WorkspaceInfo } from "../types";
 
 export interface DesktopApi {
   selectWorkspace(): Promise<WorkspaceInfo | null>;
+  selectMarkdownFile(): Promise<OpenedDocument | null>;
   listWorkspaceEntries(root: string, relativePath?: string): Promise<WorkspaceEntry[]>;
   readMarkdownFile(root: string, relativePath: string): Promise<DocumentContent>;
   readWorkspaceAsset(root: string, documentPath: string, source: string): Promise<string>;
   writeMarkdownFile(root: string, relativePath: string, content: string): Promise<{ success: boolean }>;
   createMarkdownFile(root: string, relativePath: string): Promise<WorkspaceEntry>;
   renameMarkdownEntry(root: string, from: string, to: string): Promise<WorkspaceEntry>;
-  deleteMarkdownEntry(root: string, relativePath: string): Promise<{ success: boolean }>;
-  chooseExportDirectory(): Promise<string | null>;
-  exportCodeBlocks(
-    exportRoot: string,
-    files: Array<{ filename: string; content: string }>,
-    overwrite: boolean,
-  ): Promise<ExportResult>;
 }
 
 export const tauriApi: DesktopApi = {
   selectWorkspace: () => invoke("select_workspace"),
+  selectMarkdownFile: () => invoke("select_markdown_file"),
   listWorkspaceEntries: (root, relativePath) => invoke("list_workspace_entries", { root, relativePath }),
   readMarkdownFile: (root, relativePath) => invoke("read_markdown_file", { root, relativePath }),
   readWorkspaceAsset: (root, documentPath, source) => invoke("read_workspace_asset", { root, documentPath, source }),
@@ -27,10 +22,6 @@ export const tauriApi: DesktopApi = {
     invoke("write_markdown_file", { root, relativePath, content }),
   createMarkdownFile: (root, relativePath) => invoke("create_markdown_file", { root, relativePath }),
   renameMarkdownEntry: (root, from, to) => invoke("rename_markdown_entry", { root, from, to }),
-  deleteMarkdownEntry: (root, relativePath) => invoke("delete_markdown_entry", { root, relativePath }),
-  chooseExportDirectory: () => invoke("choose_export_directory"),
-  exportCodeBlocks: (exportRoot, files, overwrite) =>
-    invoke("export_code_blocks", { exportRoot, files, overwrite }),
 };
 
 const sampleMarkdown = `# Service Deployment Notes
@@ -54,7 +45,7 @@ flowchart LR
 
 ## Deployment Script
 
-\`\`\`python file=deploy.py
+\`\`\`python
 import subprocess
 
 def deploy(target):
@@ -74,6 +65,7 @@ export function createDemoApi(): DesktopApi {
   ];
   return {
     selectWorkspace: async () => ({ root: "demo", name: "docs" }),
+    selectMarkdownFile: async () => ({ root: "demo", relativePath: "architecture.md", name: "architecture.md", content: source }),
     listWorkspaceEntries: async (_root, relativePath) => {
       if (!relativePath) {
         return [{ name: "docs", relativePath: "docs", kind: "directory", childrenLoaded: false }];
@@ -98,16 +90,5 @@ export function createDemoApi(): DesktopApi {
       entry.relativePath = to;
       return entry;
     },
-    deleteMarkdownEntry: async (_root, relativePath) => {
-      const index = documents.findIndex((document) => document.relativePath === relativePath);
-      if (index >= 0) documents.splice(index, 1);
-      return { success: true };
-    },
-    chooseExportDirectory: async () => "demo-export",
-    exportCodeBlocks: async (_root, files) => ({ written: files.map((file) => file.filename), conflicts: [], rejected: [] }),
   };
-}
-
-export function exportFiles(items: CodeBlockExportItem[]) {
-  return items.map((item) => ({ filename: item.resolvedFileName, content: item.content }));
 }

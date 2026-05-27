@@ -5,14 +5,16 @@ import { keymap } from "@codemirror/view";
 import { githubDark, githubLight } from "@uiw/codemirror-theme-github";
 import { FileText } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { Messages } from "../i18n";
 
 interface EditorPanelProps {
+  labels?: Messages;
   path: string;
   value: string;
   onChange(value: string): void;
 }
 
-export function EditorPanel({ path, value, onChange }: EditorPanelProps) {
+export function EditorPanel({ labels, path, value, onChange }: EditorPanelProps) {
   const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export function EditorPanel({ path, value, onChange }: EditorPanelProps) {
 
   return (
     <section className="editor-panel">
-      <header><FileText size={16} />Markdown source <span>{path}</span></header>
+      <header><FileText size={16} />{labels?.markdownSource ?? "Markdown source"} <span>{path}</span></header>
       <CodeMirror
         value={value}
         height="100%"

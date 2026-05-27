@@ -1,4 +1,5 @@
 export type EditorMode = "preview" | "edit";
+export type SourceKind = "workspace" | "single-file";
 
 export interface DocumentSession {
   path: string;
@@ -6,14 +7,6 @@ export interface DocumentSession {
   savedText: string;
   isDirty: boolean;
   mode: EditorMode;
-}
-
-export interface CodeBlockExportItem {
-  language: string;
-  requestedFileName?: string;
-  resolvedFileName: string;
-  content: string;
-  hasConflict: boolean;
 }
 
 export interface WorkspaceEntry {
@@ -35,8 +28,18 @@ export interface DocumentContent {
   content: string;
 }
 
-export interface ExportResult {
-  written: string[];
-  conflicts: string[];
-  rejected: string[];
+export interface OpenedDocument extends DocumentContent {
+  root: string;
+  name: string;
+}
+
+export interface DocumentContext {
+  kind: SourceKind;
+  root: string;
+  workspaceName?: string;
+}
+
+export interface RecentWorkspace {
+  root: string;
+  name: string;
 }

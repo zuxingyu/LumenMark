@@ -6,15 +6,17 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { Components } from "react-markdown";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { extensionForLanguage } from "../export/codeBlocks";
+import { codeLanguageLabel, messages, type Locale } from "../../i18n";
 import { isTauriRuntime } from "../../services/desktop";
 
 interface MarkdownPreviewProps {
+  locale?: Locale;
   source: string;
   imageResolver?: (source: string) => Promise<string>;
 }
 
-function MermaidBlock({ source }: { source: string }) {
+function MermaidBlock({ locale, source }: { locale: Locale; source: string }) {
+  const labels = messages[locale];
   const generatedId = useId().replaceAll(":", "");
   const [svg, setSvg] = useState<string>();
   const [error, setError] = useState(false);
@@ -40,34 +42,26 @@ function MermaidBlock({ source }: { source: string }) {
   if (error) {
     return (
       <div className="diagram-error">
-        <p>Unable to render this diagram.</p>
+        <p>{labels.diagramError}</p>
         <pre>{source}</pre>
       </div>
     );
   }
-  if (!svg) return <div className="diagram-loading">Rendering diagram...</div>;
+  if (!svg) return <div className="diagram-loading">{labels.diagramLoading}</div>;
   return <div className="mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
-function safeFileLabel(language: string, metadata: string | undefined): string {
-  const requested = metadata?.match(/(?:^|\s)file=(?:"([^"]+)"|'([^']+)'|([^\s]+))/);
-  const candidate = requested?.[1] ?? requested?.[2] ?? requested?.[3];
-  if (candidate && !candidate.includes("/") && !candidate.includes("\\") && !candidate.includes("..")) {
-    return candidate;
-  }
-  return `snippet.${extensionForLanguage(language)}`;
-}
-
 function CodeBlock({
+  locale,
   language,
-  metadata,
   source,
 }: {
+  locale: Locale;
   language: string;
-  metadata?: string;
   source: string;
 }) {
-  const filename = safeFileLabel(language, metadata);
+  const labels = messages[locale];
+  const label = codeLanguageLabel(language);
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -79,9 +73,9 @@ function CodeBlock({
   return (
     <section className="code-panel">
       <header>
-        <span>{filename}</span>
-        <button type="button" aria-label={`Copy ${filename}`} onClick={() => void copy()}>
-          {copied ? "Copied" : "Copy"}
+        <span>{label}</span>
+        <button type="button" aria-label={locale === "zh-CN" ? `复制 ${label} 代码` : `Copy ${label} code`} onClick={() => void copy()}>
+          {copied ? labels.copied : labels.copy}
         </button>
       </header>
       <Highlight theme={themes.github} code={source.replace(/\n$/, "")} language={language}>
@@ -103,14 +97,17 @@ function CodeBlock({
 }
 
 function WorkspaceImage({
+  locale,
   source,
   alt,
   resolver,
 }: {
+  locale: Locale;
   source: string;
   alt: string;
   resolver?: (source: string) => Promise<string>;
 }) {
+  const labels = messages[locale];
   const [resolved, setResolved] = useState(resolver ? undefined : source);
   const [blocked, setBlocked] = useState(false);
 
@@ -129,27 +126,27 @@ function WorkspaceImage({
     };
   }, [resolver, source]);
 
-  if (blocked) return <span className="image-blocked">Image blocked</span>;
-  return resolved ? <img src={resolved} alt={alt} /> : <span className="image-loading">Loading image...</span>;
+  if (blocked) return <span className="image-blocked">{labels.imageBlocked}</span>;
+  return resolved ? <img src={resolved} alt={alt} /> : <span className="image-loading">{labels.imageLoading}</span>;
 }
 
-export function MarkdownPreview({ source, imageResolver }: MarkdownPreviewProps) {
+export function MarkdownPreview({ locale = "en-US", source, imageResolver }: MarkdownPreviewProps) {
+  const labels = messages[locale];
   const components: Components = {
-    code({ className, children, node }) {
+    code({ className, children }) {
       const match = /language-([^\s]+)/.exec(className ?? "");
       if (!match) return <code className={className}>{children}</code>;
       const language = match[1].toLowerCase();
       const value = String(children);
-      if (language === "mermaid") return <MermaidBlock source={value.replace(/\n$/, "")} />;
-      const metadata = (node as { data?: { meta?: string } } | undefined)?.data?.meta;
-      return <CodeBlock language={language} metadata={metadata} source={value} />;
+      if (language === "mermaid") return <MermaidBlock locale={locale} source={value.replace(/\n$/, "")} />;
+      return <CodeBlock locale={locale} language={language} source={value} />;
     },
     a({ href, children }) {
       const isExternal = Boolean(href && /^https?:\/\//i.test(href));
       async function openExternal(event: MouseEvent<HTMLAnchorElement>) {
         if (!isExternal || !href) return;
         event.preventDefault();
-        if (!window.confirm(`Open this link in your browser?\n\n${href}`)) return;
+        if (!window.confirm(`${labels.externalLink}\n\n${href}`)) return;
         if (isTauriRuntime()) await openUrl(href);
         else window.open(href, "_blank", "noopener,noreferrer");
       }
@@ -161,7 +158,7 @@ export function MarkdownPreview({ source, imageResolver }: MarkdownPreviewProps)
     },
     img({ src, alt }) {
       const safe = src && !/^(?:[a-z]+:|\/|\\)/i.test(src) && (imageResolver || !src.split(/[\\/]/).includes(".."));
-      return safe ? <WorkspaceImage source={src} alt={alt ?? ""} resolver={imageResolver} /> : <span className="image-blocked">Image blocked</span>;
+      return safe ? <WorkspaceImage locale={locale} source={src} alt={alt ?? ""} resolver={imageResolver} /> : <span className="image-blocked">{labels.imageBlocked}</span>;
     },
   };
 

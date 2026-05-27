@@ -186,6 +186,48 @@ button.primary:hover:not(:disabled) {
   text-transform: none;
 }
 
+.sidebar-section {
+  margin: 15px 10px 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.recent-workspace {
+  position: relative;
+}
+
+.recent-workspace .workspace-root {
+  width: calc(100% - 34px);
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.recent-workspace .workspace-root.active {
+  color: var(--text);
+}
+
+.remove-workspace {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.remove-workspace:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
 .workspace-root {
   margin: 12px 6px 6px;
   display: flex;
@@ -274,6 +316,11 @@ button.primary:hover:not(:disabled) {
 
 .welcome button {
   padding: 11px 22px;
+}
+
+.welcome-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .markdown-preview {

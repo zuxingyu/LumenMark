@@ -1,17 +1,21 @@
-import { ChevronDown, ChevronRight, FileText, Folder, FolderTree, MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Folder, FolderTree, X } from "lucide-react";
 import type { ReactNode } from "react";
-import type { WorkspaceEntry, WorkspaceInfo } from "../types";
+import type { Messages } from "../i18n";
+import type { RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "../types";
 
 interface SidebarProps {
+  labels: Messages;
   workspace: WorkspaceInfo | null;
+  recentWorkspaces: RecentWorkspace[];
   entries: WorkspaceEntry[];
   activePath?: string;
   onSelect(entry: WorkspaceEntry): void;
+  onSelectWorkspace(workspace: RecentWorkspace): void;
+  onRemoveWorkspace(workspace: RecentWorkspace): void;
   onRename(): void;
-  onDelete(): void;
 }
 
-export function Sidebar({ workspace, entries, activePath, onSelect, onRename, onDelete }: SidebarProps) {
+export function Sidebar({ labels, workspace, recentWorkspaces, entries, activePath, onSelect, onSelectWorkspace, onRemoveWorkspace, onRename }: SidebarProps) {
   function treeRow(entry: WorkspaceEntry, depth = 0): ReactNode {
     const isDirectory = entry.kind === "directory";
     return (
@@ -33,24 +37,28 @@ export function Sidebar({ workspace, entries, activePath, onSelect, onRename, on
   return (
     <aside className="sidebar">
       <div className="sidebar-title">
-        <span>Workspace</span>
+        <span>{labels.workspace}</span>
         {activePath ? (
           <div className="document-menu">
-            <button type="button" aria-label="Rename active document" onClick={onRename}>Rename</button>
-            <button type="button" aria-label="Delete active document" onClick={onDelete}>Delete</button>
+            <button type="button" aria-label={labels.rename} onClick={onRename}>{labels.rename}</button>
           </div>
-        ) : <MoreHorizontal size={16} />}
+        ) : null}
       </div>
-      {workspace ? (
-        <>
-          <div className="workspace-root"><FolderTree size={17} />{workspace.name}</div>
-          <nav aria-label="Markdown documents">
-            {entries.map((entry) => treeRow(entry))}
-          </nav>
-        </>
-      ) : (
-        <p className="sidebar-empty">Open a folder containing Markdown documents.</p>
-      )}
+      {recentWorkspaces.length ? <p className="sidebar-section">{labels.recentWorkspaces}</p> : null}
+      {recentWorkspaces.map((recent) => (
+        <div className="recent-workspace" key={recent.root}>
+          <button className={workspace?.root === recent.root ? "workspace-root active" : "workspace-root"} type="button" onClick={() => onSelectWorkspace(recent)}>
+            <FolderTree size={17} />{recent.name}
+          </button>
+          <button className="remove-workspace" type="button" aria-label={`${labels.remove} ${recent.name}`} onClick={() => onRemoveWorkspace(recent)}>
+            <X size={14} />
+          </button>
+          {workspace?.root === recent.root ? (
+            <nav aria-label="Markdown documents">{entries.map((entry) => treeRow(entry))}</nav>
+          ) : null}
+        </div>
+      ))}
+      {!workspace && !recentWorkspaces.length ? <p className="sidebar-empty">{labels.noWorkspace}</p> : null}
     </aside>
   );
 }

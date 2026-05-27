@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -30,23 +30,17 @@ pub struct DocumentContent {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OperationResult {
-    pub success: bool,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExportFile {
-    pub filename: String,
+pub struct OpenedDocument {
+    pub root: String,
+    pub relative_path: String,
+    pub name: String,
     pub content: String,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ExportResult {
-    pub written: Vec<String>,
-    pub conflicts: Vec<String>,
-    pub rejected: Vec<String>,
+pub struct OperationResult {
+    pub success: bool,
 }
 
 fn has_only_normal_components(path: &Path) -> bool {
@@ -192,6 +186,41 @@ fn select_workspace() -> CommandResult<Option<WorkspaceInfo>> {
         .transpose()
 }
 
+pub fn opened_document_from_path(path: &Path) -> CommandResult<OpenedDocument> {
+    let path = path
+        .canonicalize()
+        .map_err(|error| format!("Unable to access selected document: {error}"))?;
+    require_markdown(&path)?;
+    let root = path
+        .parent()
+        .ok_or_else(|| "Unable to determine document folder.".to_string())?
+        .canonicalize()
+        .map_err(|error| format!("Unable to access document folder: {error}"))?;
+    let relative_path = relative_string(&root, &path)?;
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("Document.md")
+        .to_string();
+    let content = fs::read_to_string(&path)
+        .map_err(|error| format!("Unable to read UTF-8 Markdown document: {error}"))?;
+    Ok(OpenedDocument {
+        root: root.to_string_lossy().to_string(),
+        relative_path,
+        name,
+        content,
+    })
+}
+
+#[tauri::command]
+fn select_markdown_file() -> CommandResult<Option<OpenedDocument>> {
+    rfd::FileDialog::new()
+        .add_filter("Markdown", &["md"])
+        .pick_file()
+        .map(|path| opened_document_from_path(&path))
+        .transpose()
+}
+
 #[tauri::command]
 fn list_workspace_entries(
     root: String,
@@ -285,84 +314,18 @@ fn rename_markdown_entry(root: String, from: String, to: String) -> CommandResul
     entry_from_path(&root_path, &destination)
 }
 
-#[tauri::command]
-fn delete_markdown_entry(root: String, relative_path: String) -> CommandResult<OperationResult> {
-    let path = safe_workspace_path(Path::new(&root), &relative_path, true)?;
-    if path.is_dir() {
-        fs::remove_dir_all(path).map_err(|error| format!("Unable to delete folder: {error}"))?;
-    } else {
-        require_markdown(&path)?;
-        fs::remove_file(path).map_err(|error| format!("Unable to delete document: {error}"))?;
-    }
-    Ok(OperationResult { success: true })
-}
-
-#[tauri::command]
-fn choose_export_directory() -> Option<String> {
-    rfd::FileDialog::new()
-        .pick_folder()
-        .map(|folder| folder.to_string_lossy().to_string())
-}
-
-pub fn export_code_blocks_to(root: &Path, files: Vec<ExportFile>, overwrite: bool) -> ExportResult {
-    let root = match root.canonicalize() {
-        Ok(root) => root,
-        Err(_) => {
-            return ExportResult {
-                written: vec![],
-                conflicts: vec![],
-                rejected: files.into_iter().map(|file| file.filename).collect(),
-            }
-        }
-    };
-    let mut result = ExportResult {
-        written: vec![],
-        conflicts: vec![],
-        rejected: vec![],
-    };
-
-    for file in files {
-        let filename = Path::new(&file.filename);
-        if filename.components().count() != 1 || !has_only_normal_components(filename) {
-            result.rejected.push(file.filename);
-            continue;
-        }
-        let destination = root.join(filename);
-        if destination.exists() && !overwrite {
-            result.conflicts.push(file.filename);
-            continue;
-        }
-        match fs::write(destination, file.content) {
-            Ok(_) => result.written.push(file.filename),
-            Err(_) => result.rejected.push(file.filename),
-        }
-    }
-    result
-}
-
-#[tauri::command]
-fn export_code_blocks(
-    export_root: String,
-    files: Vec<ExportFile>,
-    overwrite: bool,
-) -> ExportResult {
-    export_code_blocks_to(Path::new(&export_root), files, overwrite)
-}
-
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             select_workspace,
+            select_markdown_file,
             list_workspace_entries,
             read_markdown_file,
             read_workspace_asset,
             write_markdown_file,
             create_markdown_file,
-            rename_markdown_entry,
-            delete_markdown_entry,
-            choose_export_directory,
-            export_code_blocks
+            rename_markdown_entry
         ])
         .run(tauri::generate_context!())
         .expect("error while running LumenMark");
@@ -370,8 +333,9 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{export_code_blocks_to, read_asset_data_url, safe_workspace_path, ExportFile};
+    use super::{opened_document_from_path, read_asset_data_url, safe_workspace_path};
     use std::fs;
+    use std::path::Path;
     use tempfile::tempdir;
 
     #[test]
@@ -385,28 +349,23 @@ mod tests {
     }
 
     #[test]
-    fn exports_safe_relative_file_names_without_overwriting() {
-        let root = tempdir().expect("temp export");
-        fs::write(root.path().join("main.py"), "existing").expect("fixture");
-        let files = vec![
-            ExportFile {
-                filename: "main.py".to_string(),
-                content: "print('hello')".to_string(),
-            },
-            ExportFile {
-                filename: "../unsafe.sh".to_string(),
-                content: "rm -rf /".to_string(),
-            },
-        ];
+    fn opens_a_single_markdown_document_with_its_parent_as_safety_root() {
+        let root = tempdir().expect("temp document");
+        let document_path = root.path().join("notes.md");
+        fs::write(&document_path, "# Notes").expect("fixture");
 
-        let result = export_code_blocks_to(root.path(), files, false);
-        assert_eq!(result.written.len(), 0);
-        assert_eq!(result.conflicts, vec!["main.py"]);
-        assert_eq!(result.rejected, vec!["../unsafe.sh"]);
+        let opened = opened_document_from_path(&document_path).expect("opened document");
+        assert_eq!(opened.relative_path, "notes.md");
+        assert_eq!(opened.name, "notes.md");
+        assert_eq!(opened.content, "# Notes");
         assert_eq!(
-            fs::read_to_string(root.path().join("main.py")).unwrap(),
-            "existing"
+            Path::new(&opened.root),
+            root.path().canonicalize().expect("canonical root")
         );
+
+        let not_markdown = root.path().join("notes.txt");
+        fs::write(&not_markdown, "text").expect("non markdown fixture");
+        assert!(opened_document_from_path(&not_markdown).is_err());
     }
 
     #[test]
@@ -419,5 +378,15 @@ mod tests {
 
         assert!(read_asset_data_url(root.path(), "docs/guide.md", "../assets/plot.png").is_ok());
         assert!(read_asset_data_url(root.path(), "docs/guide.md", "../../escape.png").is_err());
+    }
+
+    #[test]
+    fn release_windows_entrypoint_suppresses_console_window() {
+        assert!(include_str!("main.rs").contains("windows_subsystem = \"windows\""));
+    }
+
+    #[test]
+    fn guarded_close_has_explicit_window_permission() {
+        assert!(include_str!("../capabilities/default.json").contains("core:window:allow-close"));
     }
 }

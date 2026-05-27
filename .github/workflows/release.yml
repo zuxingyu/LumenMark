@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: --bundles nsis
+          - platform: macos-15
+            args: --target aarch64-apple-darwin --bundles dmg
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Add Apple Silicon Rust target
+        if: runner.os == 'macOS'
+        run: rustup target add aarch64-apple-darwin
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Test frontend
+        run: npm run test
+      - name: Test Rust commands
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Bundle and upload release asset
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: LumenMark ${{ github.ref_name }}
+          releaseBody: |
+            Unsigned test build for Windows x64 and macOS Apple Silicon.
+
+            Windows may display a SmartScreen warning. macOS users may need to allow the application through Finder Open or Privacy & Security on first launch.
+          releaseDraft: false
+          prerelease: true
+          args: ${{ matrix.args }}
