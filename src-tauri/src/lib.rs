@@ -386,8 +386,10 @@ mod tests {
     }
 
     #[test]
-    fn guarded_close_has_explicit_window_permission() {
-        assert!(include_str!("../capabilities/default.json").contains("core:window:allow-close"));
+    fn guarded_close_has_permissions_for_request_and_final_destroy() {
+        let capabilities = include_str!("../capabilities/default.json");
+        assert!(capabilities.contains("core:window:allow-close"));
+        assert!(capabilities.contains("core:window:allow-destroy"));
     }
 
     #[test]

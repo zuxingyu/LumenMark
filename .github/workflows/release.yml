@@ -45,7 +45,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: LumenMark ${{ github.ref_name }}
           releaseBody: |
-            Test build for Windows x64 and macOS Apple Silicon. The Windows installer is unsigned. The macOS app bundle is ad-hoc signed to fix Apple Silicon bundle validation, but is not notarized.
+            v0.2.2 fixes application window closing on Windows and macOS. Test build for Windows x64 and macOS Apple Silicon. The Windows installer is unsigned. The macOS app bundle is ad-hoc signed to fix Apple Silicon bundle validation, but is not notarized.
 
             Windows may display a SmartScreen warning. macOS users may need to allow the application through Finder Open or Privacy & Security on first launch.
           releaseDraft: false

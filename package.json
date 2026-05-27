@@ -1,7 +1,7 @@
 {
   "name": "lumenmark",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A calm cross-platform Markdown editor.",
   "type": "module",
   "scripts": {
