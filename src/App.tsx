@@ -1,8 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FindReplaceBar } from "./components/FindReplaceBar";
 import { Sidebar } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
 import { UnsavedDialog } from "./components/UnsavedDialog";
 import { createOpenedSession, createUntitledSession, editSession, markSaved } from "./features/document/session";
+import { buildOutline } from "./features/editor/document-tools";
 import { initialLocale, LOCALE_KEY, messages, RECENT_WORKSPACES_KEY, type Locale } from "./i18n";
 import { createDemoApi, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
 import type { DocumentSession, RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "./types";
@@ -41,10 +43,12 @@ export function App({ api: providedApi }: AppProps) {
   const [entries, setEntries] = useState<WorkspaceEntry[]>([]);
   const [session, setSession] = useState<DocumentSession>(() => createUntitledSession(messages[initialLocale()].untitled));
   const [editorKey, setEditorKey] = useState(0);
+  const [findVisible, setFindVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [status, setStatus] = useState<string>(() => messages[initialLocale()].ready);
   const [error, setError] = useState<string>();
   const allowClose = useRef(false);
+  const outline = useMemo(() => buildOutline(session.sourceText), [session.sourceText]);
 
   function replaceSession(next: DocumentSession) {
     setSession(next);
@@ -99,6 +103,10 @@ export function App({ api: providedApi }: AppProps) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         if (session.isDirty) void saveDocument();
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setFindVisible(true);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -232,6 +240,11 @@ export function App({ api: providedApi }: AppProps) {
     });
   }
 
+  function replaceFromFind(sourceText: string) {
+    setSession((current) => editSession(current, sourceText));
+    setEditorKey((current) => current + 1);
+  }
+
   return (
     <div className="app-shell">
       <Toolbar
@@ -243,7 +256,7 @@ export function App({ api: providedApi }: AppProps) {
         onOpenFolder={openWorkspace}
         onNew={createDocument}
         onSave={() => void saveDocument()}
-        onFind={() => window.dispatchEvent(new CustomEvent("lumenmark:find"))}
+        onFind={() => setFindVisible(true)}
         onToggleLocale={changeLocale}
       />
       <div className="workspace-layout">
@@ -252,13 +265,23 @@ export function App({ api: providedApi }: AppProps) {
           workspace={workspace}
           recentWorkspaces={recentWorkspaces}
           entries={entries}
+          outline={outline}
           activePath={workspace ? session.path ?? undefined : undefined}
           onSelect={selectEntry}
           onSelectWorkspace={openRecentWorkspace}
           onRemoveWorkspace={removeWorkspace}
           onRename={renameDocument}
+          onOutlineSelect={(item) => window.dispatchEvent(new CustomEvent("lumenmark:outline", { detail: item.id }))}
         />
         <main className="document-surface">
+          {findVisible ? (
+            <FindReplaceBar
+              labels={labels}
+              source={session.sourceText}
+              onReplace={replaceFromFind}
+              onClose={() => setFindVisible(false)}
+            />
+          ) : null}
           <Suspense fallback={<div className="surface-loading">{labels.loading}</div>}>
             <VisualMarkdownEditor
               key={editorKey}

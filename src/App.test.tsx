@@ -132,4 +132,41 @@ describe("LumenMark app shell", () => {
 
     expect(screen.getByRole("dialog", { name: "保存更改？" })).toBeVisible();
   });
+
+  it("shows an outline derived from the active document headings", async () => {
+    render(<App api={{
+      ...api,
+      selectMarkdownFile: async () => ({
+        root: "/single",
+        relativePath: "outline.md",
+        name: "outline.md",
+        content: "# Title\n\n## Details",
+      }),
+    }} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "打开文件" })[0]);
+
+    await waitFor(() => expect(screen.getByText("文档大纲")).toBeVisible());
+    expect(screen.getByRole("button", { name: "Title" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Details" })).toBeVisible();
+  });
+
+  it("opens find and replace and applies a literal replace-all operation", async () => {
+    render(<App api={{
+      ...api,
+      selectMarkdownFile: async () => ({
+        root: "/single",
+        relativePath: "replace.md",
+        name: "replace.md",
+        content: "alpha alpha",
+      }),
+    }} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "打开文件" })[0]);
+    await waitFor(() => expect(screen.getByText("alpha alpha")).toBeVisible());
+    fireEvent.click(screen.getByRole("button", { name: "查找" }));
+    fireEvent.change(screen.getByLabelText("查找内容"), { target: { value: "alpha" } });
+    fireEvent.change(screen.getByLabelText("替换为"), { target: { value: "beta" } });
+    fireEvent.click(screen.getByRole("button", { name: "全部替换" }));
+
+    expect(screen.getByText("beta beta")).toBeVisible();
+  });
 });

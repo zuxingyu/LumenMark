@@ -1,21 +1,23 @@
 import { ChevronDown, ChevronRight, FileText, Folder, FolderTree, X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Messages } from "../i18n";
-import type { RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "../types";
+import type { OutlineItem, RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "../types";
 
 interface SidebarProps {
   labels: Messages;
   workspace: WorkspaceInfo | null;
   recentWorkspaces: RecentWorkspace[];
   entries: WorkspaceEntry[];
+  outline: OutlineItem[];
   activePath?: string;
   onSelect(entry: WorkspaceEntry): void;
   onSelectWorkspace(workspace: RecentWorkspace): void;
   onRemoveWorkspace(workspace: RecentWorkspace): void;
   onRename(): void;
+  onOutlineSelect(item: OutlineItem): void;
 }
 
-export function Sidebar({ labels, workspace, recentWorkspaces, entries, activePath, onSelect, onSelectWorkspace, onRemoveWorkspace, onRename }: SidebarProps) {
+export function Sidebar({ labels, workspace, recentWorkspaces, entries, outline, activePath, onSelect, onSelectWorkspace, onRemoveWorkspace, onRename, onOutlineSelect }: SidebarProps) {
   function treeRow(entry: WorkspaceEntry, depth = 0): ReactNode {
     const isDirectory = entry.kind === "directory";
     return (
@@ -58,6 +60,22 @@ export function Sidebar({ labels, workspace, recentWorkspaces, entries, activePa
           ) : null}
         </div>
       ))}
+      {outline.length ? (
+        <nav className="outline" aria-label={labels.outline}>
+          <p className="sidebar-section">{labels.outline}</p>
+          {outline.map((item) => (
+            <button
+              className="outline-item"
+              key={item.id}
+              style={{ paddingLeft: `${10 + (item.level - 1) * 14}px` }}
+              type="button"
+              onClick={() => onOutlineSelect(item)}
+            >
+              {item.text}
+            </button>
+          ))}
+        </nav>
+      ) : null}
       {!workspace && !recentWorkspaces.length ? <p className="sidebar-empty">{labels.noWorkspace}</p> : null}
     </aside>
   );
