@@ -26,6 +26,7 @@ interface VisualMarkdownEditorProps {
   title: string;
   value: string;
   onChange(value: string): void;
+  resolveImage?(source: string): Promise<string>;
 }
 
 const codeLanguages = [
@@ -41,7 +42,7 @@ const codeLanguages = [
   LanguageDescription.of({ name: "Python", alias: ["python", "py"], extensions: ["py"], support: python() }),
 ];
 
-export function VisualMarkdownEditor({ labels, title, value, onChange }: VisualMarkdownEditorProps) {
+export function VisualMarkdownEditor({ labels, title, value, onChange, resolveImage }: VisualMarkdownEditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null);
   const changeHandler = useRef(onChange);
 
@@ -58,7 +59,9 @@ export function VisualMarkdownEditor({ labels, title, value, onChange }: VisualM
       .addFeature(cursor)
       .addFeature(listItem)
       .addFeature(linkTooltip)
-      .addFeature(imageBlock)
+      .addFeature(imageBlock, {
+          proxyDomURL: (source) => resolveImage?.(source).catch(() => "") ?? "",
+      })
       .addFeature(blockEdit)
       .addFeature(placeholder, {
           text: labels.untitled,

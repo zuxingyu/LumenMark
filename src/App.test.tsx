@@ -30,6 +30,8 @@ const api: DesktopApi = {
     name: "untitled.md",
     content,
   }),
+  openExternalMarkdownFile: async (path) => ({ root: "/dropped", relativePath: "drop.md", name: "drop.md", content: path }),
+  pendingExternalDocuments: async () => [],
 };
 
 describe("LumenMark app shell", () => {
@@ -168,5 +170,20 @@ describe("LumenMark app shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "全部替换" }));
 
     expect(screen.getByText("beta beta")).toBeVisible();
+  });
+
+  it("opens a pending desktop-delivered Markdown file on startup", async () => {
+    render(<App api={{
+      ...api,
+      pendingExternalDocuments: async () => [{
+        root: "/external",
+        relativePath: "launch.md",
+        name: "launch.md",
+        content: "# Launched",
+      }],
+    }} />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "launch.md" })).toBeVisible());
+    expect(screen.getByText("# Launched")).toBeVisible();
   });
 });

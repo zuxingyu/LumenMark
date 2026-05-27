@@ -6,10 +6,11 @@ LumenMark is a local Markdown reader and editor for Windows 10/11 x64 and macOS 
 
 ## Features
 
-- Open a single `.md` file or a folder workspace; remove recent-folder associations without deleting files.
-- Switch between a clean preview and CodeMirror source editing; save manually with `Ctrl+S` or `Cmd+S`.
-- Render GFM tables and tasks, KaTeX math, Mermaid diagrams, and highlighted JSON, SQL, Shell, Python, and Java blocks.
-- Copy code blocks from preview; LumenMark never executes or exports code blocks.
+- Launch directly into an untitled document, then save it as `.md` with `Ctrl+S` or `Cmd+S`.
+- Edit formatted Markdown directly through the Milkdown Crepe visual editor; open a file, a folder workspace, drag a `.md` into the window, or use the operating system's Open With action.
+- Edit GFM tables and tasks, KaTeX math, Mermaid diagrams, and highlighted JSON, SQL, Shell, Python, and Java blocks.
+- Navigate headings with the live outline and use find and replace inside the document.
+- Copy code blocks; LumenMark never executes or exports code blocks.
 - Keep raw HTML inactive and restrict local images and document I/O to the selected safety root.
 - Start in Simplified Chinese with an in-app English switch.
 
@@ -32,13 +33,13 @@ npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-The sample workspace at `examples/workspace/architecture.md` exercises formulas, Mermaid, and supported highlighted languages.
+The sample workspace at `examples/workspace/architecture.md` exercises formulas, Mermaid, and supported highlighted languages. Visual editing may normalize equivalent Markdown whitespace, list layout, or fenced-block formatting when saving; byte-for-byte preservation of nonstandard extensions is not promised.
 
 ## Releases
 
-Pushing a version tag such as `v0.2.2` creates a GitHub Release with:
+Pushing the `v0.3.0` version tag creates a GitHub Release with:
 
 - `LumenMark_<version>_x64-setup.exe` for Windows x64 (NSIS, per-user installation, WebView2 bootstrapper).
 - `LumenMark_<version>_aarch64.dmg` for macOS Apple Silicon.
 
-Version `v0.2.2` fixes application window closing on both platforms. These builds are test releases. The Windows installer is unsigned. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
+Version `v0.3.0` adds direct visual editing and desktop Markdown file integration while retaining the window-closing correction from `v0.2.2`. These builds are test releases. The Windows installer is unsigned. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.

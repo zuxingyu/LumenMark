@@ -2,6 +2,11 @@ use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
+};
+use tauri::{Emitter, Manager};
 
 type CommandResult<T> = Result<T, String>;
 
@@ -28,7 +33,7 @@ pub struct DocumentContent {
     pub content: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenedDocument {
     pub root: String,
@@ -41,6 +46,12 @@ pub struct OpenedDocument {
 #[serde(rename_all = "camelCase")]
 pub struct OperationResult {
     pub success: bool,
+}
+
+#[derive(Default)]
+struct ExternalDocumentState {
+    pending: Mutex<Vec<OpenedDocument>>,
+    frontend_ready: AtomicBool,
 }
 
 fn has_only_normal_components(path: &Path) -> bool {
@@ -221,6 +232,23 @@ fn select_markdown_file() -> CommandResult<Option<OpenedDocument>> {
         .transpose()
 }
 
+#[tauri::command]
+fn open_external_markdown_file(path: String) -> CommandResult<OpenedDocument> {
+    opened_document_from_path(Path::new(&path))
+}
+
+#[tauri::command]
+fn pending_external_documents(
+    state: tauri::State<'_, ExternalDocumentState>,
+) -> CommandResult<Vec<OpenedDocument>> {
+    state.frontend_ready.store(true, Ordering::SeqCst);
+    let mut pending = state
+        .pending
+        .lock()
+        .map_err(|_| "Unable to access pending documents.".to_string())?;
+    Ok(std::mem::take(&mut *pending))
+}
+
 pub fn write_new_document_at_path(path: &Path, content: &str) -> CommandResult<OpenedDocument> {
     require_markdown(path)?;
     fs::write(path, content).map_err(|error| format!("Unable to save document: {error}"))?;
@@ -330,13 +358,56 @@ fn rename_markdown_entry(root: String, from: String, to: String) -> CommandResul
     entry_from_path(&root_path, &destination)
 }
 
+fn deliver_external_document(app: &tauri::AppHandle, path: &Path) {
+    let Ok(document) = opened_document_from_path(path) else {
+        return;
+    };
+    let state = app.state::<ExternalDocumentState>();
+    if state.frontend_ready.load(Ordering::SeqCst) {
+        let _ = app.emit("external-document-opened", document);
+    } else if let Ok(mut pending) = state.pending.lock() {
+        pending.push(document.clone());
+    }
+}
+
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default().manage(ExternalDocumentState::default());
+    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if let Some(path) = args
+                .iter()
+                .skip(1)
+                .map(Path::new)
+                .find(|path| require_markdown(path).is_ok())
+            {
+                deliver_external_document(app, path);
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_focus();
+                }
+            }
+        }));
+    }
+
+    builder
         .plugin(tauri_plugin_opener::init())
+        .setup(|_app| {
+            #[cfg(target_os = "windows")]
+            if let Some(path) = std::env::args()
+                .skip(1)
+                .map(PathBuf::from)
+                .find(|path| require_markdown(path).is_ok())
+            {
+                deliver_external_document(&_app.handle(), &path);
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             select_workspace,
             select_markdown_file,
             save_new_markdown_file,
+            open_external_markdown_file,
+            pending_external_documents,
             list_workspace_entries,
             read_markdown_file,
             read_workspace_asset,
@@ -344,8 +415,20 @@ pub fn run() {
             create_markdown_file,
             rename_markdown_entry
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running LumenMark");
+        .build(tauri::generate_context!())
+        .expect("error while building LumenMark")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Opened { urls } = event {
+                for url in urls {
+                    if let Ok(path) = url.to_file_path() {
+                        deliver_external_document(app, &path);
+                    }
+                }
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = (app, event);
+        });
 }
 
 #[cfg(test)]
@@ -408,9 +491,27 @@ mod tests {
         let saved = write_new_document_at_path(&document_path, "# Draft").expect("saved");
         assert_eq!(saved.relative_path, "draft.md");
         assert_eq!(saved.content, "# Draft");
-        assert_eq!(fs::read_to_string(document_path).expect("content"), "# Draft");
+        assert_eq!(
+            fs::read_to_string(document_path).expect("content"),
+            "# Draft"
+        );
 
         assert!(write_new_document_at_path(&root.path().join("draft.txt"), "text").is_err());
+    }
+
+    #[test]
+    fn external_open_accepts_only_existing_markdown_documents() {
+        let root = tempdir().expect("temp external");
+        let document = root.path().join("drop.md");
+        fs::write(&document, "# Drop").expect("fixture");
+
+        let opened = super::open_external_markdown_file(document.to_string_lossy().to_string())
+            .expect("opened");
+        assert_eq!(opened.name, "drop.md");
+        assert!(super::open_external_markdown_file(
+            root.path().join("missing.md").to_string_lossy().to_string()
+        )
+        .is_err());
     }
 
     #[test]
@@ -428,5 +529,11 @@ mod tests {
     #[test]
     fn macos_bundle_uses_ad_hoc_signing_for_apple_silicon_distribution() {
         assert!(include_str!("../tauri.conf.json").contains("\"signingIdentity\": \"-\""));
+    }
+
+    #[test]
+    fn desktop_bundle_registers_markdown_file_associations_and_single_instance() {
+        assert!(include_str!("../tauri.conf.json").contains("\"fileAssociations\""));
+        assert!(include_str!("../Cargo.toml").contains("tauri-plugin-single-instance"));
     }
 }

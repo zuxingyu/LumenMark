@@ -6,8 +6,8 @@ import { UnsavedDialog } from "./components/UnsavedDialog";
 import { createOpenedSession, createUntitledSession, editSession, markSaved } from "./features/document/session";
 import { buildOutline } from "./features/editor/document-tools";
 import { initialLocale, LOCALE_KEY, messages, RECENT_WORKSPACES_KEY, type Locale } from "./i18n";
-import { createDemoApi, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
-import type { DocumentSession, RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "./types";
+import { createDemoApi, firstMarkdownPath, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
+import type { DocumentSession, OpenedDocument, RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "./types";
 
 interface AppProps {
   api?: DesktopApi;
@@ -48,7 +48,12 @@ export function App({ api: providedApi }: AppProps) {
   const [status, setStatus] = useState<string>(() => messages[initialLocale()].ready);
   const [error, setError] = useState<string>();
   const allowClose = useRef(false);
+  const localeRef = useRef(locale);
+  const sessionRef = useRef(session);
+  localeRef.current = locale;
+  sessionRef.current = session;
   const outline = useMemo(() => buildOutline(session.sourceText), [session.sourceText]);
+  const assetContext = session.root && session.path ? { root: session.root, path: session.path } : null;
 
   function replaceSession(next: DocumentSession) {
     setSession(next);
@@ -75,6 +80,8 @@ export function App({ api: providedApi }: AppProps) {
       setError(`${labels.operationFailed}: ${detail}`);
     }
   }, [labels.operationFailed]);
+  const attemptRef = useRef(attempt);
+  attemptRef.current = attempt;
 
   const saveDocument = useCallback(async (): Promise<boolean> => {
     try {
@@ -137,6 +144,87 @@ export function App({ api: providedApi }: AppProps) {
     else void attempt(action);
   }
 
+  function editOpenedDocument(selected: OpenedDocument) {
+    setWorkspace(null);
+    setEntries([]);
+    replaceSession(createOpenedSession("single-file", selected.root, selected.relativePath, selected.content));
+    setStatus(localeRef.current === "zh-CN" ? `正在编辑 ${selected.name}` : `Editing ${selected.name}`);
+  }
+
+  useEffect(() => {
+    if (isTauriRuntime()) return;
+    let active = true;
+    void api.pendingExternalDocuments()
+      .then(([selected]) => {
+        if (active && selected) editOpenedDocument(selected);
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        const detail = reason instanceof Error ? reason.message : String(reason);
+        setError(`${messages[localeRef.current].operationFailed}: ${detail}`);
+      });
+    return () => {
+      active = false;
+    };
+    // Non-desktop adapters do not publish native document-open events.
+  }, [api]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let disposed = false;
+    const stops: Array<() => void> = [];
+    const requestOpen = (selected: OpenedDocument, ignoredAdditionalFiles = false) => {
+      const action = async () => {
+        editOpenedDocument(selected);
+        if (ignoredAdditionalFiles) {
+          setStatus(localeRef.current === "zh-CN" ? "已打开首个 Markdown 文件，其余文件未处理" : "Opened the first Markdown file; other files were ignored");
+        }
+      };
+      if (sessionRef.current.isDirty) setPendingAction(() => action);
+      else void attemptRef.current(action);
+    };
+
+    void (async () => {
+      const { listen } = await import("@tauri-apps/api/event");
+      const stopEvents = await listen<OpenedDocument>("external-document-opened", (event) => requestOpen(event.payload));
+      if (disposed) {
+        stopEvents();
+        return;
+      }
+      stops.push(stopEvents);
+      const [pendingDocument] = await api.pendingExternalDocuments();
+      if (pendingDocument) requestOpen(pendingDocument);
+
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const stopDrops = await getCurrentWindow().onDragDropEvent(async (event) => {
+        if (event.payload.type !== "drop") return;
+        const path = firstMarkdownPath(event.payload.paths);
+        if (!path) return;
+        try {
+          const selected = await api.openExternalMarkdownFile(path);
+          requestOpen(selected, event.payload.paths.length > 1);
+        } catch (reason) {
+          const detail = reason instanceof Error ? reason.message : String(reason);
+          setError(`${messages[localeRef.current].operationFailed}: ${detail}`);
+        }
+      });
+      if (disposed) {
+        stopDrops();
+        return;
+      }
+      stops.push(stopDrops);
+    })().catch((reason: unknown) => {
+      if (!disposed) {
+        const detail = reason instanceof Error ? reason.message : String(reason);
+        setError(`${messages[localeRef.current].operationFailed}: ${detail}`);
+      }
+    });
+    return () => {
+      disposed = true;
+      stops.forEach((stop) => stop());
+    };
+  }, [api]);
+
   function addRecentWorkspace(selected: WorkspaceInfo) {
     setRecentWorkspaces((current) => [
       selected,
@@ -185,10 +273,7 @@ export function App({ api: providedApi }: AppProps) {
     afterDirty(async () => {
       const selected = await api.selectMarkdownFile();
       if (!selected) return;
-      setWorkspace(null);
-      setEntries([]);
-      replaceSession(createOpenedSession("single-file", selected.root, selected.relativePath, selected.content));
-      setStatus(locale === "zh-CN" ? `正在阅读 ${selected.name}` : `Reading ${selected.name}`);
+      editOpenedDocument(selected);
     });
   }
 
@@ -236,6 +321,7 @@ export function App({ api: providedApi }: AppProps) {
       const renamed = await api.renameMarkdownEntry(workspaceRoot, currentPath, nextPath);
       setEntries((current) => mapEntryTree(current, currentPath, () => renamed));
       setSession((current) => ({ ...current, path: renamed.relativePath, title: renamed.name }));
+      setEditorKey((current) => current + 1);
       setStatus(locale === "zh-CN" ? `已重命名为 ${renamed.name}` : `Renamed to ${renamed.name}`);
     });
   }
@@ -289,6 +375,9 @@ export function App({ api: providedApi }: AppProps) {
               title={session.title}
               value={session.sourceText}
               onChange={(value) => setSession((current) => editSession(current, value))}
+              resolveImage={assetContext
+                ? (source) => api.readWorkspaceAsset(assetContext.root, assetContext.path, source)
+                : undefined}
             />
           </Suspense>
         </main>
