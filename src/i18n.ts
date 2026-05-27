@@ -9,6 +9,7 @@ export const messages = {
     openFolder: "打开文件夹",
     newDocument: "新建",
     save: "保存",
+    find: "查找",
     edit: "编辑",
     preview: "预览",
     changeLanguage: "English",
@@ -37,12 +38,14 @@ export const messages = {
     copied: "已复制",
     externalLink: "是否在系统浏览器中打开此链接？",
     operationFailed: "操作失败",
+    untitled: "未命名",
   },
   "en-US": {
     openFile: "Open File",
     openFolder: "Open Folder",
     newDocument: "New",
     save: "Save",
+    find: "Find",
     edit: "Edit",
     preview: "Preview",
     changeLanguage: "中文",
@@ -71,6 +74,7 @@ export const messages = {
     copied: "Copied",
     externalLink: "Open this link in your browser?",
     operationFailed: "Operation failed",
+    untitled: "Untitled",
   },
 } as const;
 

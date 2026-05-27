@@ -1,12 +1,31 @@
-import type { DocumentSession, EditorMode } from "../../types";
+import type { DocumentSession, SourceKind } from "../../types";
 
-export function createSession(path: string, sourceText: string): DocumentSession {
+export function createUntitledSession(title: string): DocumentSession {
+  return {
+    path: null,
+    root: null,
+    title,
+    sourceText: "",
+    savedText: "",
+    isDirty: false,
+    sourceKind: "untitled",
+  };
+}
+
+export function createOpenedSession(
+  sourceKind: Exclude<SourceKind, "untitled">,
+  root: string,
+  path: string,
+  sourceText: string,
+): DocumentSession {
   return {
     path,
+    root,
+    title: path.split("/").at(-1) ?? path,
     sourceText,
     savedText: sourceText,
     isDirty: false,
-    mode: "preview",
+    sourceKind,
   };
 }
 
@@ -28,11 +47,3 @@ export function markSaved(session: DocumentSession): DocumentSession {
     isDirty: false,
   };
 }
-
-export function changeMode(
-  session: DocumentSession,
-  mode: EditorMode,
-): DocumentSession {
-  return { ...session, mode };
-}
-

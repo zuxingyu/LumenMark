@@ -1,12 +1,13 @@
-export type EditorMode = "preview" | "edit";
-export type SourceKind = "workspace" | "single-file";
+export type SourceKind = "untitled" | "workspace" | "single-file";
 
 export interface DocumentSession {
-  path: string;
+  path: string | null;
+  root: string | null;
+  title: string;
   sourceText: string;
   savedText: string;
   isDirty: boolean;
-  mode: EditorMode;
+  sourceKind: SourceKind;
 }
 
 export interface WorkspaceEntry {
@@ -34,7 +35,7 @@ export interface OpenedDocument extends DocumentContent {
 }
 
 export interface DocumentContext {
-  kind: SourceKind;
+  kind: Exclude<SourceKind, "untitled">;
   root: string;
   workspaceName?: string;
 }
@@ -42,4 +43,11 @@ export interface DocumentContext {
 export interface RecentWorkspace {
   root: string;
   name: string;
+}
+
+export interface OutlineItem {
+  id: string;
+  level: number;
+  text: string;
+  position: number;
 }

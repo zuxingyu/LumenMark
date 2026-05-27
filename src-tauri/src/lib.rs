@@ -221,6 +221,22 @@ fn select_markdown_file() -> CommandResult<Option<OpenedDocument>> {
         .transpose()
 }
 
+pub fn write_new_document_at_path(path: &Path, content: &str) -> CommandResult<OpenedDocument> {
+    require_markdown(path)?;
+    fs::write(path, content).map_err(|error| format!("Unable to save document: {error}"))?;
+    opened_document_from_path(path)
+}
+
+#[tauri::command]
+fn save_new_markdown_file(content: String) -> CommandResult<Option<OpenedDocument>> {
+    rfd::FileDialog::new()
+        .add_filter("Markdown", &["md"])
+        .set_file_name("untitled.md")
+        .save_file()
+        .map(|path| write_new_document_at_path(&path, &content))
+        .transpose()
+}
+
 #[tauri::command]
 fn list_workspace_entries(
     root: String,
@@ -320,6 +336,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             select_workspace,
             select_markdown_file,
+            save_new_markdown_file,
             list_workspace_entries,
             read_markdown_file,
             read_workspace_asset,
@@ -333,7 +350,10 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{opened_document_from_path, read_asset_data_url, safe_workspace_path};
+    use super::{
+        opened_document_from_path, read_asset_data_url, safe_workspace_path,
+        write_new_document_at_path,
+    };
     use std::fs;
     use std::path::Path;
     use tempfile::tempdir;
@@ -378,6 +398,19 @@ mod tests {
 
         assert!(read_asset_data_url(root.path(), "docs/guide.md", "../assets/plot.png").is_ok());
         assert!(read_asset_data_url(root.path(), "docs/guide.md", "../../escape.png").is_err());
+    }
+
+    #[test]
+    fn saves_new_documents_only_as_markdown_files() {
+        let root = tempdir().expect("temp document");
+        let document_path = root.path().join("draft.md");
+
+        let saved = write_new_document_at_path(&document_path, "# Draft").expect("saved");
+        assert_eq!(saved.relative_path, "draft.md");
+        assert_eq!(saved.content, "# Draft");
+        assert_eq!(fs::read_to_string(document_path).expect("content"), "# Draft");
+
+        assert!(write_new_document_at_path(&root.path().join("draft.txt"), "text").is_err());
     }
 
     #[test]

@@ -284,6 +284,28 @@ button.primary:hover:not(:disabled) {
   color: var(--muted);
 }
 
+.visual-editor {
+  max-width: 980px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 34px 54px 70px;
+}
+
+.visual-document-header {
+  margin-bottom: 16px;
+  color: var(--muted);
+}
+
+.visual-document-header h1 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.crepe-root {
+  min-height: calc(100vh - 185px);
+}
+
 .welcome {
   height: 100%;
   max-width: 470px;
