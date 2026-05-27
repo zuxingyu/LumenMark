@@ -389,4 +389,9 @@ mod tests {
     fn guarded_close_has_explicit_window_permission() {
         assert!(include_str!("../capabilities/default.json").contains("core:window:allow-close"));
     }
+
+    #[test]
+    fn macos_bundle_uses_ad_hoc_signing_for_apple_silicon_distribution() {
+        assert!(include_str!("../tauri.conf.json").contains("\"signingIdentity\": \"-\""));
+    }
 }

@@ -36,9 +36,9 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## 安装包与首次运行
 
-推送 `v0.2.0` 等版本标签后，GitHub Release 会生成：
+推送 `v0.2.1` 等版本标签后，GitHub Release 会生成：
 
 - Windows x64 的 `LumenMark_<version>_x64-setup.exe`（NSIS 用户级安装，包含 WebView2 引导安装配置）。
 - macOS Apple Silicon 的 `LumenMark_<version>_aarch64.dmg`。
 
-`v0.2.0` 为未签名测试版本。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+`v0.2.1` 为测试版本。Windows 安装包未签名；macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
