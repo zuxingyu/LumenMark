@@ -273,6 +273,25 @@ button.primary:hover:not(:disabled) {
   line-height: 1.5;
 }
 
+.outline {
+  margin-top: 22px;
+}
+
+.outline-item {
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: left;
+}
+
+.outline-item:hover {
+  color: var(--text);
+}
+
 .document-surface {
   min-height: 0;
   overflow: auto;
@@ -282,6 +301,74 @@ button.primary:hover:not(:disabled) {
 .surface-loading {
   padding: 32px;
   color: var(--muted);
+}
+
+.find-bar {
+  position: sticky;
+  z-index: 2;
+  top: 12px;
+  float: right;
+  margin: 12px 24px -58px 0;
+  padding: 9px;
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--chrome);
+  box-shadow: var(--shadow);
+}
+
+.find-bar label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.find-bar input {
+  width: 146px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--page);
+}
+
+.find-bar button {
+  height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.mermaid-error {
+  padding: 12px;
+  border: 1px solid #dc6a62;
+  border-radius: 8px;
+  color: #b42318;
+}
+
+.visual-editor {
+  max-width: 980px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 34px 54px 70px;
+}
+
+.visual-document-header {
+  margin-bottom: 16px;
+  color: var(--muted);
+}
+
+.visual-document-header h1 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.crepe-root {
+  min-height: calc(100vh - 185px);
 }
 
 .welcome {

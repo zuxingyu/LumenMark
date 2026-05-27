@@ -3,11 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import type { DesktopApi } from "./services/desktop";
 
-vi.mock("./components/EditorPanel", () => ({
-  EditorPanel: ({ path, onChange }: { path: string; onChange(value: string): void }) => (
+vi.mock("./components/VisualMarkdownEditor", () => ({
+  VisualMarkdownEditor: ({ title, value, onChange }: { title: string; value: string; onChange(value: string): void }) => (
     <section>
-      Markdown source {path}
-      <button type="button" onClick={() => onChange("# Changed")}>Change source</button>
+      <h1>{title}</h1>
+      <span>{value}</span>
+      <button type="button" onClick={() => onChange("# Changed")}>修改文档</button>
     </section>
   ),
 }));
@@ -23,6 +24,14 @@ const api: DesktopApi = {
   createMarkdownFile: async () => ({ name: "new.md", relativePath: "new.md", kind: "markdown", childrenLoaded: false }),
   renameMarkdownEntry: async () => ({ name: "guide.md", relativePath: "guide.md", kind: "markdown", childrenLoaded: false }),
   readWorkspaceAsset: async (_root, _documentPath, source) => source,
+  saveNewMarkdownFile: async (content) => ({
+    root: "/new",
+    relativePath: "untitled.md",
+    name: "untitled.md",
+    content,
+  }),
+  openExternalMarkdownFile: async (path) => ({ root: "/dropped", relativePath: "drop.md", name: "drop.md", content: path }),
+  pendingExternalDocuments: async () => [],
 };
 
 describe("LumenMark app shell", () => {
@@ -30,9 +39,11 @@ describe("LumenMark app shell", () => {
     localStorage.clear();
   });
 
-  it("uses Chinese by default and persists an English locale choice", () => {
+  it("starts in an untitled Chinese visual editing document and persists an English locale choice", async () => {
     const { unmount } = render(<App api={api} />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "未命名" })).toBeVisible());
     expect(screen.getAllByRole("button", { name: "打开文件夹" })[0]).toBeVisible();
+    expect(screen.queryByRole("button", { name: "预览" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "English" }));
     expect(screen.getAllByRole("button", { name: "Open Folder" })[0]).toBeVisible();
     unmount();
@@ -41,23 +52,21 @@ describe("LumenMark app shell", () => {
     expect(screen.getAllByRole("button", { name: "Open Folder" })[0]).toBeVisible();
   });
 
-  it("opens a workspace document and switches to source editing", async () => {
+  it("opens a workspace document directly in the visual editor", async () => {
     render(<App api={api} />);
     fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
 
     await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
     fireEvent.click(screen.getByText("guide.md"));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Guide" })).toBeVisible());
-
-    fireEvent.click(screen.getByRole("button", { name: "编辑" }));
-    await waitFor(() => expect(screen.getByText(/Markdown source/)).toBeVisible());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "guide.md" })).toBeVisible());
+    expect(screen.getByText("# Guide")).toBeVisible();
   });
 
   it("opens a single Markdown file without adding a recent workspace", async () => {
     render(<App api={api} />);
     fireEvent.click(screen.getAllByRole("button", { name: "打开文件" })[0]);
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Solo" })).toBeVisible());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "solo.md" })).toBeVisible());
     expect(screen.queryByText("最近工作区")).not.toBeInTheDocument();
     expect(localStorage.getItem("lumenmark.recentWorkspaces")).toBe("[]");
   });
@@ -94,30 +103,87 @@ describe("LumenMark app shell", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
     await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
     fireEvent.click(screen.getByText("guide.md"));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Guide" })).toBeVisible());
-    fireEvent.click(screen.getByRole("button", { name: "编辑" }));
-    await waitFor(() => expect(screen.getByText("Change source")).toBeVisible());
-    fireEvent.click(screen.getByText("Change source"));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "guide.md" })).toBeVisible());
+    fireEvent.click(screen.getByText("修改文档"));
 
     fireEvent.keyDown(window, { key: "s", ctrlKey: true });
 
     await waitFor(() => expect(writeMarkdownFile).toHaveBeenCalledWith("/docs", "guide.md", "# Changed"));
   });
 
-  it("asks before replacing a changed document with a new one", async () => {
-    const prompt = vi.spyOn(window, "prompt").mockReturnValue("new.md");
+  it("saves a changed untitled document through Save As", async () => {
+    const saveNewMarkdownFile = vi.fn().mockResolvedValue({
+      root: "/created",
+      relativePath: "draft.md",
+      name: "draft.md",
+      content: "# Changed",
+    });
+    render(<App api={{ ...api, saveNewMarkdownFile }} />);
+    fireEvent.click(screen.getByText("修改文档"));
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+
+    await waitFor(() => expect(saveNewMarkdownFile).toHaveBeenCalledWith("# Changed"));
+    expect(screen.getByRole("heading", { name: "draft.md" })).toBeVisible();
+  });
+
+  it("asks before replacing a changed document with a new blank one", async () => {
     render(<App api={api} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
-    await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
-    fireEvent.click(screen.getByText("guide.md"));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Guide" })).toBeVisible());
-    fireEvent.click(screen.getByRole("button", { name: "编辑" }));
-    await waitFor(() => expect(screen.getByText("Change source")).toBeVisible());
-    fireEvent.click(screen.getByText("Change source"));
+    fireEvent.click(screen.getByText("修改文档"));
 
     fireEvent.click(screen.getByRole("button", { name: "新建" }));
 
     expect(screen.getByRole("dialog", { name: "保存更改？" })).toBeVisible();
-    prompt.mockRestore();
+  });
+
+  it("shows an outline derived from the active document headings", async () => {
+    render(<App api={{
+      ...api,
+      selectMarkdownFile: async () => ({
+        root: "/single",
+        relativePath: "outline.md",
+        name: "outline.md",
+        content: "# Title\n\n## Details",
+      }),
+    }} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "打开文件" })[0]);
+
+    await waitFor(() => expect(screen.getByText("文档大纲")).toBeVisible());
+    expect(screen.getByRole("button", { name: "Title" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Details" })).toBeVisible();
+  });
+
+  it("opens find and replace and applies a literal replace-all operation", async () => {
+    render(<App api={{
+      ...api,
+      selectMarkdownFile: async () => ({
+        root: "/single",
+        relativePath: "replace.md",
+        name: "replace.md",
+        content: "alpha alpha",
+      }),
+    }} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "打开文件" })[0]);
+    await waitFor(() => expect(screen.getByText("alpha alpha")).toBeVisible());
+    fireEvent.click(screen.getByRole("button", { name: "查找" }));
+    fireEvent.change(screen.getByLabelText("查找内容"), { target: { value: "alpha" } });
+    fireEvent.change(screen.getByLabelText("替换为"), { target: { value: "beta" } });
+    fireEvent.click(screen.getByRole("button", { name: "全部替换" }));
+
+    expect(screen.getByText("beta beta")).toBeVisible();
+  });
+
+  it("opens a pending desktop-delivered Markdown file on startup", async () => {
+    render(<App api={{
+      ...api,
+      pendingExternalDocuments: async () => [{
+        root: "/external",
+        relativePath: "launch.md",
+        name: "launch.md",
+        content: "# Launched",
+      }],
+    }} />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "launch.md" })).toBeVisible());
+    expect(screen.getByText("# Launched")).toBeVisible();
   });
 });

@@ -1,11 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FindReplaceBar } from "./components/FindReplaceBar";
 import { Sidebar } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
 import { UnsavedDialog } from "./components/UnsavedDialog";
-import { changeMode, createSession, editSession, markSaved } from "./features/document/session";
+import { createOpenedSession, createUntitledSession, editSession, markSaved } from "./features/document/session";
+import { buildOutline } from "./features/editor/document-tools";
 import { initialLocale, LOCALE_KEY, messages, RECENT_WORKSPACES_KEY, type Locale } from "./i18n";
-import { createDemoApi, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
-import type { DocumentContext, DocumentSession, RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "./types";
+import { createDemoApi, firstMarkdownPath, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
+import type { DocumentSession, OpenedDocument, RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "./types";
 
 interface AppProps {
   api?: DesktopApi;
@@ -13,8 +15,7 @@ interface AppProps {
 
 type PendingAction = (() => Promise<void>) | null;
 
-const MarkdownPreview = lazy(() => import("./features/preview/MarkdownPreview").then((module) => ({ default: module.MarkdownPreview })));
-const EditorPanel = lazy(() => import("./components/EditorPanel").then((module) => ({ default: module.EditorPanel })));
+const VisualMarkdownEditor = lazy(() => import("./components/VisualMarkdownEditor").then((module) => ({ default: module.VisualMarkdownEditor })));
 
 function loadRecentWorkspaces(): RecentWorkspace[] {
   try {
@@ -39,13 +40,25 @@ export function App({ api: providedApi }: AppProps) {
   const labels = messages[locale];
   const [recentWorkspaces, setRecentWorkspaces] = useState<RecentWorkspace[]>(loadRecentWorkspaces);
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
-  const [context, setContext] = useState<DocumentContext | null>(null);
   const [entries, setEntries] = useState<WorkspaceEntry[]>([]);
-  const [session, setSession] = useState<DocumentSession | null>(null);
+  const [session, setSession] = useState<DocumentSession>(() => createUntitledSession(messages[initialLocale()].untitled));
+  const [editorKey, setEditorKey] = useState(0);
+  const [findVisible, setFindVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [status, setStatus] = useState<string>(() => messages[initialLocale()].ready);
   const [error, setError] = useState<string>();
   const allowClose = useRef(false);
+  const localeRef = useRef(locale);
+  const sessionRef = useRef(session);
+  localeRef.current = locale;
+  sessionRef.current = session;
+  const outline = useMemo(() => buildOutline(session.sourceText), [session.sourceText]);
+  const assetContext = session.root && session.path ? { root: session.root, path: session.path } : null;
+
+  function replaceSession(next: DocumentSession) {
+    setSession(next);
+    setEditorKey((current) => current + 1);
+  }
 
   useEffect(() => {
     localStorage.setItem(RECENT_WORKSPACES_KEY, JSON.stringify(recentWorkspaces));
@@ -67,13 +80,22 @@ export function App({ api: providedApi }: AppProps) {
       setError(`${labels.operationFailed}: ${detail}`);
     }
   }, [labels.operationFailed]);
+  const attemptRef = useRef(attempt);
+  attemptRef.current = attempt;
 
   const saveDocument = useCallback(async (): Promise<boolean> => {
-    if (!context || !session) return false;
     try {
-      await api.writeMarkdownFile(context.root, session.path, session.sourceText);
-      setSession((current) => (current ? markSaved(current) : current));
-      setStatus(locale === "zh-CN" ? `已保存 ${session.path}` : `Saved ${session.path}`);
+      if (session.sourceKind === "untitled") {
+        const saved = await api.saveNewMarkdownFile(session.sourceText);
+        if (!saved) return false;
+        replaceSession(markSaved(createOpenedSession("single-file", saved.root, saved.relativePath, session.sourceText)));
+        setStatus(locale === "zh-CN" ? `已保存 ${saved.name}` : `Saved ${saved.name}`);
+      } else {
+        if (!session.root || !session.path) return false;
+        await api.writeMarkdownFile(session.root, session.path, session.sourceText);
+        setSession((current) => markSaved(current));
+        setStatus(locale === "zh-CN" ? `已保存 ${session.path}` : `Saved ${session.path}`);
+      }
       setError(undefined);
       return true;
     } catch (reason) {
@@ -81,13 +103,17 @@ export function App({ api: providedApi }: AppProps) {
       setError(`${labels.operationFailed}: ${detail}`);
       return false;
     }
-  }, [api, context, labels.operationFailed, locale, session]);
+  }, [api, labels.operationFailed, locale, session]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && session) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         if (session.isDirty) void saveDocument();
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setFindVisible(true);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -100,7 +126,7 @@ export function App({ api: providedApi }: AppProps) {
     void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
       const currentWindow = getCurrentWindow();
       void currentWindow.onCloseRequested((event) => {
-        if (!session?.isDirty || allowClose.current) return;
+        if (!session.isDirty || allowClose.current) return;
         event.preventDefault();
         setPendingAction(() => async () => {
           allowClose.current = true;
@@ -111,12 +137,93 @@ export function App({ api: providedApi }: AppProps) {
       });
     });
     return () => unlisten?.();
-  }, [session?.isDirty]);
+  }, [session.isDirty]);
 
   function afterDirty(action: () => Promise<void>) {
-    if (session?.isDirty) setPendingAction(() => action);
+    if (session.isDirty) setPendingAction(() => action);
     else void attempt(action);
   }
+
+  function editOpenedDocument(selected: OpenedDocument) {
+    setWorkspace(null);
+    setEntries([]);
+    replaceSession(createOpenedSession("single-file", selected.root, selected.relativePath, selected.content));
+    setStatus(localeRef.current === "zh-CN" ? `正在编辑 ${selected.name}` : `Editing ${selected.name}`);
+  }
+
+  useEffect(() => {
+    if (isTauriRuntime()) return;
+    let active = true;
+    void api.pendingExternalDocuments()
+      .then(([selected]) => {
+        if (active && selected) editOpenedDocument(selected);
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        const detail = reason instanceof Error ? reason.message : String(reason);
+        setError(`${messages[localeRef.current].operationFailed}: ${detail}`);
+      });
+    return () => {
+      active = false;
+    };
+    // Non-desktop adapters do not publish native document-open events.
+  }, [api]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let disposed = false;
+    const stops: Array<() => void> = [];
+    const requestOpen = (selected: OpenedDocument, ignoredAdditionalFiles = false) => {
+      const action = async () => {
+        editOpenedDocument(selected);
+        if (ignoredAdditionalFiles) {
+          setStatus(localeRef.current === "zh-CN" ? "已打开首个 Markdown 文件，其余文件未处理" : "Opened the first Markdown file; other files were ignored");
+        }
+      };
+      if (sessionRef.current.isDirty) setPendingAction(() => action);
+      else void attemptRef.current(action);
+    };
+
+    void (async () => {
+      const { listen } = await import("@tauri-apps/api/event");
+      const stopEvents = await listen<OpenedDocument>("external-document-opened", (event) => requestOpen(event.payload));
+      if (disposed) {
+        stopEvents();
+        return;
+      }
+      stops.push(stopEvents);
+      const [pendingDocument] = await api.pendingExternalDocuments();
+      if (pendingDocument) requestOpen(pendingDocument);
+
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const stopDrops = await getCurrentWindow().onDragDropEvent(async (event) => {
+        if (event.payload.type !== "drop") return;
+        const path = firstMarkdownPath(event.payload.paths);
+        if (!path) return;
+        try {
+          const selected = await api.openExternalMarkdownFile(path);
+          requestOpen(selected, event.payload.paths.length > 1);
+        } catch (reason) {
+          const detail = reason instanceof Error ? reason.message : String(reason);
+          setError(`${messages[localeRef.current].operationFailed}: ${detail}`);
+        }
+      });
+      if (disposed) {
+        stopDrops();
+        return;
+      }
+      stops.push(stopDrops);
+    })().catch((reason: unknown) => {
+      if (!disposed) {
+        const detail = reason instanceof Error ? reason.message : String(reason);
+        setError(`${messages[localeRef.current].operationFailed}: ${detail}`);
+      }
+    });
+    return () => {
+      disposed = true;
+      stops.forEach((stop) => stop());
+    };
+  }, [api]);
 
   function addRecentWorkspace(selected: WorkspaceInfo) {
     setRecentWorkspaces((current) => [
@@ -129,9 +236,8 @@ export function App({ api: providedApi }: AppProps) {
     return async () => {
       const nextEntries = await api.listWorkspaceEntries(selected.root);
       setWorkspace(selected);
-      setContext({ kind: "workspace", root: selected.root, workspaceName: selected.name });
       setEntries(nextEntries);
-      setSession(null);
+      replaceSession(createUntitledSession(labels.untitled));
       setStatus(locale === "zh-CN" ? `已打开 ${selected.name}` : `Opened ${selected.name}`);
     };
   }
@@ -154,9 +260,8 @@ export function App({ api: providedApi }: AppProps) {
       setRecentWorkspaces((current) => current.filter((entry) => entry.root !== selected.root));
       if (workspace?.root === selected.root) {
         setWorkspace(null);
-        setContext(null);
         setEntries([]);
-        setSession(null);
+        replaceSession(createUntitledSession(labels.untitled));
       }
       setStatus(locale === "zh-CN" ? `已移除 ${selected.name} 的关联` : `Removed ${selected.name}`);
     };
@@ -168,11 +273,7 @@ export function App({ api: providedApi }: AppProps) {
     afterDirty(async () => {
       const selected = await api.selectMarkdownFile();
       if (!selected) return;
-      setWorkspace(null);
-      setEntries([]);
-      setContext({ kind: "single-file", root: selected.root });
-      setSession(createSession(selected.relativePath, selected.content));
-      setStatus(locale === "zh-CN" ? `正在阅读 ${selected.name}` : `Reading ${selected.name}`);
+      editOpenedDocument(selected);
     });
   }
 
@@ -194,39 +295,40 @@ export function App({ api: providedApi }: AppProps) {
     }
     afterDirty(async () => {
       const document = await api.readMarkdownFile(workspace.root, entry.relativePath);
-      setSession(createSession(document.relativePath, document.content));
+      replaceSession(createOpenedSession("workspace", workspace.root, document.relativePath, document.content));
       setStatus(locale === "zh-CN" ? `正在阅读 ${entry.name}` : `Reading ${entry.name}`);
     });
   }
 
   function createDocument() {
-    if (!workspace) return;
     afterDirty(async () => {
-      const requested = window.prompt(labels.createPrompt, "untitled.md");
-      if (!requested) return;
-      const filename = requested.endsWith(".md") ? requested : `${requested}.md`;
-      const entry = await api.createMarkdownFile(workspace.root, filename);
-      setEntries((current) => [...current, entry]);
-      const document = await api.readMarkdownFile(workspace.root, entry.relativePath);
-      setSession(createSession(document.relativePath, document.content));
-      setStatus(locale === "zh-CN" ? `已创建 ${entry.name}` : `Created ${entry.name}`);
+      replaceSession(createUntitledSession(labels.untitled));
+      setStatus(locale === "zh-CN" ? "已新建空白文档" : "New blank document");
     });
   }
 
   function renameDocument() {
-    if (!workspace || !session) return;
-    const oldName = session.path.split("/").at(-1) ?? session.path;
+    if (!workspace || session.sourceKind !== "workspace" || !session.path) return;
+    const currentPath = session.path;
+    const workspaceRoot = workspace.root;
+    const oldName = currentPath.split("/").at(-1) ?? currentPath;
     const requested = window.prompt(labels.renamePrompt, oldName);
     if (!requested || requested === oldName) return;
     const nextName = requested.endsWith(".md") ? requested : `${requested}.md`;
-    const parent = session.path.includes("/") ? session.path.slice(0, session.path.lastIndexOf("/") + 1) : "";
+    const parent = currentPath.includes("/") ? currentPath.slice(0, currentPath.lastIndexOf("/") + 1) : "";
     const nextPath = `${parent}${nextName}`;
     void attempt(async () => {
-      const renamed = await api.renameMarkdownEntry(workspace.root, session.path, nextPath);
-      setEntries((current) => mapEntryTree(current, session.path, () => renamed));
-      setSession((current) => current ? { ...current, path: renamed.relativePath } : current);
+      const renamed = await api.renameMarkdownEntry(workspaceRoot, currentPath, nextPath);
+      setEntries((current) => mapEntryTree(current, currentPath, () => renamed));
+      setSession((current) => ({ ...current, path: renamed.relativePath, title: renamed.name }));
+      setEditorKey((current) => current + 1);
       setStatus(locale === "zh-CN" ? `已重命名为 ${renamed.name}` : `Renamed to ${renamed.name}`);
     });
+  }
+
+  function replaceFromFind(sourceText: string) {
+    setSession((current) => editSession(current, sourceText));
+    setEditorKey((current) => current + 1);
   }
 
   return (
@@ -234,14 +336,13 @@ export function App({ api: providedApi }: AppProps) {
       <Toolbar
         labels={labels}
         hasWorkspace={Boolean(workspace)}
-        hasDocument={Boolean(session)}
-        dirty={Boolean(session?.isDirty)}
-        mode={session?.mode ?? "preview"}
+        hasDocument
+        dirty={session.isDirty}
         onOpenFile={openFile}
         onOpenFolder={openWorkspace}
         onNew={createDocument}
         onSave={() => void saveDocument()}
-        onToggleMode={() => setSession((current) => current ? changeMode(current, current.mode === "preview" ? "edit" : "preview") : current)}
+        onFind={() => setFindVisible(true)}
         onToggleLocale={changeLocale}
       />
       <div className="workspace-layout">
@@ -250,46 +351,40 @@ export function App({ api: providedApi }: AppProps) {
           workspace={workspace}
           recentWorkspaces={recentWorkspaces}
           entries={entries}
-          activePath={workspace ? session?.path : undefined}
+          outline={outline}
+          activePath={workspace ? session.path ?? undefined : undefined}
           onSelect={selectEntry}
           onSelectWorkspace={openRecentWorkspace}
           onRemoveWorkspace={removeWorkspace}
           onRename={renameDocument}
+          onOutlineSelect={(item) => window.dispatchEvent(new CustomEvent("lumenmark:outline", { detail: item.id }))}
         />
         <main className="document-surface">
-          {session && context ? (
-            <Suspense fallback={<div className="surface-loading">{labels.loading}</div>}>
-              {session.mode === "preview" ? (
-                <MarkdownPreview
-                  locale={locale}
-                  source={session.sourceText}
-                  imageResolver={(source) => api.readWorkspaceAsset(context.root, session.path, source)}
-                />
-              ) : (
-                <EditorPanel
-                  labels={labels}
-                  path={session.path}
-                  value={session.sourceText}
-                  onChange={(value) => setSession((current) => current ? editSession(current, value) : current)}
-                />
-              )}
-            </Suspense>
-          ) : (
-            <section className="welcome">
-              <div className="welcome-mark">L</div>
-              <h1>LumenMark</h1>
-              <p>{labels.welcome}</p>
-              <div className="welcome-actions">
-                <button type="button" onClick={openFile}>{labels.openFile}</button>
-                <button className="primary" type="button" onClick={openWorkspace}>{labels.openFolder}</button>
-              </div>
-            </section>
-          )}
+          {findVisible ? (
+            <FindReplaceBar
+              labels={labels}
+              source={session.sourceText}
+              onReplace={replaceFromFind}
+              onClose={() => setFindVisible(false)}
+            />
+          ) : null}
+          <Suspense fallback={<div className="surface-loading">{labels.loading}</div>}>
+            <VisualMarkdownEditor
+              key={editorKey}
+              labels={labels}
+              title={session.title}
+              value={session.sourceText}
+              onChange={(value) => setSession((current) => editSession(current, value))}
+              resolveImage={assetContext
+                ? (source) => api.readWorkspaceAsset(assetContext.root, assetContext.path, source)
+                : undefined}
+            />
+          </Suspense>
         </main>
       </div>
       <footer className="statusbar">
         <span>{status}</span>
-        {error ? <span className="error" role="alert">{error}</span> : <span>{session?.isDirty ? labels.unsaved : labels.saved}</span>}
+        {error ? <span className="error" role="alert">{error}</span> : <span>{session.isDirty ? labels.unsaved : labels.saved}</span>}
       </footer>
       {pendingAction ? (
         <UnsavedDialog

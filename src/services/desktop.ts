@@ -8,6 +8,9 @@ export interface DesktopApi {
   readMarkdownFile(root: string, relativePath: string): Promise<DocumentContent>;
   readWorkspaceAsset(root: string, documentPath: string, source: string): Promise<string>;
   writeMarkdownFile(root: string, relativePath: string, content: string): Promise<{ success: boolean }>;
+  saveNewMarkdownFile(content: string): Promise<OpenedDocument | null>;
+  openExternalMarkdownFile(path: string): Promise<OpenedDocument>;
+  pendingExternalDocuments(): Promise<OpenedDocument[]>;
   createMarkdownFile(root: string, relativePath: string): Promise<WorkspaceEntry>;
   renameMarkdownEntry(root: string, from: string, to: string): Promise<WorkspaceEntry>;
 }
@@ -20,6 +23,9 @@ export const tauriApi: DesktopApi = {
   readWorkspaceAsset: (root, documentPath, source) => invoke("read_workspace_asset", { root, documentPath, source }),
   writeMarkdownFile: (root, relativePath, content) =>
     invoke("write_markdown_file", { root, relativePath, content }),
+  saveNewMarkdownFile: (content) => invoke("save_new_markdown_file", { content }),
+  openExternalMarkdownFile: (path) => invoke("open_external_markdown_file", { path }),
+  pendingExternalDocuments: () => invoke("pending_external_documents"),
   createMarkdownFile: (root, relativePath) => invoke("create_markdown_file", { root, relativePath }),
   renameMarkdownEntry: (root, from, to) => invoke("rename_markdown_entry", { root, from, to }),
 };
@@ -57,6 +63,10 @@ export function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
 }
 
+export function firstMarkdownPath(paths: string[]): string | undefined {
+  return paths.find((path) => /\.md$/i.test(path));
+}
+
 export function createDemoApi(): DesktopApi {
   let source = sampleMarkdown;
   const documents: WorkspaceEntry[] = [
@@ -78,6 +88,17 @@ export function createDemoApi(): DesktopApi {
       source = content;
       return { success: true };
     },
+    saveNewMarkdownFile: async (content) => {
+      source = content;
+      return { root: "demo", relativePath: "untitled.md", name: "untitled.md", content };
+    },
+    openExternalMarkdownFile: async (path) => ({
+      root: "demo",
+      relativePath: path.split("/").at(-1) ?? "opened.md",
+      name: path.split("/").at(-1) ?? "opened.md",
+      content: source,
+    }),
+    pendingExternalDocuments: async () => [],
     createMarkdownFile: async (_root, relativePath) => {
       const entry = { name: relativePath, relativePath, kind: "markdown" as const, childrenLoaded: false };
       documents.push(entry);

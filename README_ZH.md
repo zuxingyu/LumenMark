@@ -6,9 +6,10 @@ LumenMark 是一款面向 Windows 10/11 x64 与 macOS Apple Silicon 的本地 Ma
 
 ## 功能
 
-- 打开单个 `.md` 文件，或打开文件夹作为工作区；可从最近工作区中解除文件夹关联，不会删除磁盘文件。
-- 在排版预览与 CodeMirror 源码编辑之间切换；使用 `Ctrl+S`（Windows）或 `Cmd+S`（macOS）手动保存。
-- 显示 GFM 表格与任务列表、KaTeX 数学公式、Mermaid 流程图，以及 JSON、SQL、Shell、Python、Java 代码高亮。
+- 启动后直接进入未命名空白文档；使用 `Ctrl+S`（Windows）或 `Cmd+S`（macOS）首次另存为 `.md`。
+- 通过 Milkdown Crepe 直接编辑排版后的 Markdown；可打开文件、打开工作区、拖入 `.md`，或使用系统“打开方式”。
+- 直接编辑 GFM 表格与任务列表、KaTeX 数学公式、Mermaid 流程图，以及具有高亮的 JSON、SQL、Shell、Python、Java 代码块。
+- 使用实时大纲定位标题，并在文档内执行查找和替换。
 - 代码块可复制，但软件不会执行代码，也不会把代码块导出到磁盘。
 - 默认不执行 Markdown 原始 HTML，并限制本地图片与文档读写只能位于选定的安全目录内。
 - 默认使用简体中文，可在工具栏切换英文界面。
@@ -32,13 +33,13 @@ npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-示例工作区文档 `examples/workspace/architecture.md` 包含数学公式、Mermaid 流程图和目标代码语言展示。
+示例工作区文档 `examples/workspace/architecture.md` 包含数学公式、Mermaid 流程图和目标代码语言展示。直接编辑在保存时可能规范化等价的 Markdown 空白行、列表布局或 fenced code block 排版；非标准扩展语法不承诺字节级原样保留。
 
 ## 安装包与首次运行
 
-推送 `v0.2.2` 等版本标签后，GitHub Release 会生成：
+推送 `v0.3.0` 版本标签后，GitHub Release 会生成：
 
 - Windows x64 的 `LumenMark_<version>_x64-setup.exe`（NSIS 用户级安装，包含 WebView2 引导安装配置）。
 - macOS Apple Silicon 的 `LumenMark_<version>_aarch64.dmg`。
 
-`v0.2.2` 已修复 macOS 与 Windows 上无法正常关闭应用窗口的问题。该版本仍为测试版本。Windows 安装包未签名；macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+`v0.3.0` 新增直接编辑与桌面 Markdown 文件集成，并保留 `v0.2.2` 中的窗口关闭修复。该版本仍为测试版本。Windows 安装包未签名；macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
