@@ -1,7 +1,7 @@
 {
   "name": "lumenmark",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A calm cross-platform Markdown editor.",
   "type": "module",
   "scripts": {
@@ -21,6 +21,7 @@
     "@codemirror/legacy-modes": "^6.5.3",
     "@codemirror/search": "^6.5.11",
     "@codemirror/view": "^6.38.0",
+    "@lezer/highlight": "^1.2.3",
     "@milkdown/crepe": "^7.21.1",
     "@milkdown/kit": "^7.21.1",
     "@tauri-apps/api": "^2.11.0",

@@ -8,7 +8,8 @@ LumenMark is a local Markdown reader and editor for Windows 10/11 x64 and macOS 
 
 - Launch directly into an untitled document, then save it as `.md` with `Ctrl+S` or `Cmd+S`.
 - Edit formatted Markdown directly through the Milkdown Crepe visual editor; open a file, a folder workspace, drag a `.md` into the window, or use the operating system's Open With action.
-- Edit GFM tables and tasks, KaTeX math, Mermaid diagrams, and highlighted JSON, SQL, Shell, Python, and Java blocks.
+- Edit GFM tables and tasks, KaTeX math, Mermaid diagrams, and high-contrast highlighted JSON, Java, Python, Shell, SQL, Markdown, Mermaid, and Text blocks.
+- Type three backticks followed by letters to search code block languages. For example, ```` ```j ```` offers `json` and `java`; press Enter or click a result to create the block.
 - Navigate headings with the live outline and use find and replace inside the document.
 - Copy code blocks; LumenMark never executes or exports code blocks.
 - Keep raw HTML inactive and restrict local images and document I/O to the selected safety root.
@@ -37,9 +38,13 @@ The sample workspace at `examples/workspace/architecture.md` exercises formulas,
 
 ## Releases
 
-Pushing the `v0.3.1` version tag creates a GitHub Release with:
+Pushing the `v0.3.2` version tag creates a GitHub Release with:
 
 - `LumenMark_<version>_x64-setup.exe` for Windows x64 (NSIS, per-user installation, bundled WebView2 offline installer).
 - `LumenMark_<version>_aarch64.dmg` for macOS Apple Silicon.
 
-Version `v0.3.1` fixes the Windows offline installer path and improves visual editing for headings, Enter-confirmed Markdown shortcuts, and highlighted fenced code blocks. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
+Version `v0.3.2` improves H1-H6 heading hierarchy, light/dark code highlighting, Typora-style code block language search, and the cross-platform LumenMark icon. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. macOS uses the system WebKit runtime, so the `.dmg` being much smaller than the Windows installer is expected; installation and launch do not download an additional runtime. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
+
+## Icon
+
+The app icon is generated from in-repository assets at `assets/lumenmark-icon.svg`; it does not depend on external copyrighted icon artwork. Tauri bundles the matching `icns`, `ico`, and PNG icon set.

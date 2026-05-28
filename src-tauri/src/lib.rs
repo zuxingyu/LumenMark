@@ -532,6 +532,18 @@ mod tests {
     }
 
     #[test]
+    fn desktop_bundle_declares_cross_platform_icons_and_macos_dmg() {
+        let config = include_str!("../tauri.conf.json");
+        assert!(config.contains("\"icon\""));
+        assert!(config.contains("\"icons/icon.icns\""));
+        assert!(config.contains("\"icons/icon.ico\""));
+        assert!(config.contains("\"icons/icon.png\""));
+        assert!(include_str!("../../.github/workflows/release.yml").contains("--bundles dmg"));
+        assert!(include_str!("../../.github/workflows/release.yml")
+            .contains("--target aarch64-apple-darwin"));
+    }
+
+    #[test]
     fn desktop_bundle_registers_markdown_file_associations_and_single_instance() {
         assert!(include_str!("../tauri.conf.json").contains("\"fileAssociations\""));
         assert!(include_str!("../Cargo.toml").contains("tauri-plugin-single-instance"));
