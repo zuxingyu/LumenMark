@@ -1,6 +1,6 @@
 [package]
 name = "lumenmark"
-version = "0.3.0"
+version = "0.3.1"
 description = "A calm cross-platform Markdown editor"
 authors = ["LumenMark"]
 edition = "2021"

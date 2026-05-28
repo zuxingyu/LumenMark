@@ -536,4 +536,11 @@ mod tests {
         assert!(include_str!("../tauri.conf.json").contains("\"fileAssociations\""));
         assert!(include_str!("../Cargo.toml").contains("tauri-plugin-single-instance"));
     }
+
+    #[test]
+    fn windows_bundle_embeds_webview2_offline_installer() {
+        let config = include_str!("../tauri.conf.json");
+        assert!(config.contains("\"type\": \"offlineInstaller\""));
+        assert!(!config.contains("\"type\": \"downloadBootstrapper\""));
+    }
 }

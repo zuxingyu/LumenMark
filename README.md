@@ -37,9 +37,9 @@ The sample workspace at `examples/workspace/architecture.md` exercises formulas,
 
 ## Releases
 
-Pushing the `v0.3.0` version tag creates a GitHub Release with:
+Pushing the `v0.3.1` version tag creates a GitHub Release with:
 
-- `LumenMark_<version>_x64-setup.exe` for Windows x64 (NSIS, per-user installation, WebView2 bootstrapper).
+- `LumenMark_<version>_x64-setup.exe` for Windows x64 (NSIS, per-user installation, bundled WebView2 offline installer).
 - `LumenMark_<version>_aarch64.dmg` for macOS Apple Silicon.
 
-Version `v0.3.0` adds direct visual editing and desktop Markdown file integration while retaining the window-closing correction from `v0.2.2`. These builds are test releases. The Windows installer is unsigned. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
+Version `v0.3.1` fixes the Windows offline installer path and improves visual editing for headings, Enter-confirmed Markdown shortcuts, and highlighted fenced code blocks. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.

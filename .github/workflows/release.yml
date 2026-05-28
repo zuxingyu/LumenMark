@@ -45,7 +45,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: LumenMark ${{ github.ref_name }}
           releaseBody: |
-            v0.3.0 introduces direct visual Markdown editing, untitled document save-as, outlines, find and replace, and desktop `.md` file opening and drag-and-drop integration. Test build for Windows x64 and macOS Apple Silicon. The Windows installer is unsigned. The macOS app bundle is ad-hoc signed to support Apple Silicon bundle validation, but is not notarized.
+            v0.3.1 fixes Windows offline installation by bundling the WebView2 offline installer, improves heading hierarchy styles, changes Markdown block shortcuts to confirm on Enter, and strengthens fenced code block language display and highlighting. Test build for Windows x64 and macOS Apple Silicon. The Windows installer is unsigned. The macOS app bundle is ad-hoc signed to support Apple Silicon bundle validation, but is not notarized.
 
             Windows may display a SmartScreen warning. macOS users may need to allow the application through Finder Open or Privacy & Security on first launch.
           releaseDraft: false
