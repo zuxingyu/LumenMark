@@ -15,6 +15,28 @@
   --accent-soft: #e5eeff;
   --surface: #f7f8fb;
   --shadow: 0 14px 38px rgba(16, 24, 40, 0.05);
+  --code-bg: #f8fafc;
+  --code-text: #0f172a;
+  --code-caret: #111827;
+  --code-selection: #bfdbfe;
+  --code-active-line: rgba(37, 99, 235, 0.08);
+  --code-line-number: #64748b;
+  --code-border: #d8dee9;
+  --code-border-strong: #94a3b8;
+  --code-keyword: #6d28d9;
+  --code-name: #0f766e;
+  --code-function: #1d4ed8;
+  --code-constant: #b45309;
+  --code-type: #be123c;
+  --code-number: #b45309;
+  --code-operator: #334155;
+  --code-comment: #64748b;
+  --code-link: #1d4ed8;
+  --code-heading: #1e40af;
+  --code-atom: #9333ea;
+  --code-string: #047857;
+  --code-invalid: #b91c1c;
+  --code-punctuation: #1f2937;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,6 +54,28 @@
     --accent-soft: #263754;
     --surface: #242830;
     --shadow: none;
+    --code-bg: #111827;
+    --code-text: #e5e7eb;
+    --code-caret: #f8fafc;
+    --code-selection: #1e3a8a;
+    --code-active-line: rgba(96, 165, 250, 0.12);
+    --code-line-number: #94a3b8;
+    --code-border: #334155;
+    --code-border-strong: #64748b;
+    --code-keyword: #c4b5fd;
+    --code-name: #5eead4;
+    --code-function: #93c5fd;
+    --code-constant: #fbbf24;
+    --code-type: #fda4af;
+    --code-number: #fcd34d;
+    --code-operator: #e2e8f0;
+    --code-comment: #94a3b8;
+    --code-link: #93c5fd;
+    --code-heading: #bfdbfe;
+    --code-atom: #d8b4fe;
+    --code-string: #86efac;
+    --code-invalid: #fca5a5;
+    --code-punctuation: #f8fafc;
   }
 }
 
@@ -350,6 +394,7 @@ button.primary:hover:not(:disabled) {
 }
 
 .visual-editor {
+  position: relative;
   max-width: 980px;
   min-height: 100%;
   margin: 0 auto;
@@ -373,15 +418,16 @@ button.primary:hover:not(:disabled) {
 
 .crepe-root h1,
 .crepe-root h2,
-.crepe-root h3 {
+.crepe-root h3,
+.crepe-root h4,
+.crepe-root h5,
+.crepe-root h6 {
   color: var(--text);
   letter-spacing: -0.025em;
 }
 
 .crepe-root h1 {
   margin: 34px 0 18px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border);
   font-size: 36px;
   line-height: 1.18;
   font-weight: 750;
@@ -389,8 +435,6 @@ button.primary:hover:not(:disabled) {
 
 .crepe-root h2 {
   margin: 30px 0 14px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   font-size: 27px;
   line-height: 1.24;
   font-weight: 700;
@@ -398,11 +442,33 @@ button.primary:hover:not(:disabled) {
 
 .crepe-root h3 {
   margin: 24px 0 10px;
-  padding-left: 10px;
-  border-left: 3px solid var(--accent);
   font-size: 21px;
   line-height: 1.32;
   font-weight: 650;
+}
+
+.crepe-root h4 {
+  margin: 21px 0 9px;
+  font-size: 18px;
+  line-height: 1.38;
+  font-weight: 630;
+}
+
+.crepe-root h5 {
+  margin: 18px 0 8px;
+  color: color-mix(in srgb, var(--text) 88%, var(--muted));
+  font-size: 16px;
+  line-height: 1.42;
+  font-weight: 620;
+}
+
+.crepe-root h6 {
+  margin: 16px 0 7px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 610;
+  letter-spacing: 0.01em;
 }
 
 .crepe-root .cm-editor,
@@ -412,6 +478,37 @@ button.primary:hover:not(:disabled) {
 
 .crepe-root .cm-content {
   caret-color: var(--text);
+}
+
+.code-language-search {
+  position: absolute;
+  z-index: 8;
+  min-width: 168px;
+  padding: 6px;
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--chrome);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.code-language-search button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 13px;
+}
+
+.code-language-search button:hover,
+.code-language-search button:first-child {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .welcome {

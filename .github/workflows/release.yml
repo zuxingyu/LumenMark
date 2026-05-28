@@ -45,7 +45,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: LumenMark ${{ github.ref_name }}
           releaseBody: |
-            v0.3.1 fixes Windows offline installation by bundling the WebView2 offline installer, improves heading hierarchy styles, changes Markdown block shortcuts to confirm on Enter, and strengthens fenced code block language display and highlighting. Test build for Windows x64 and macOS Apple Silicon. The Windows installer is unsigned. The macOS app bundle is ad-hoc signed to support Apple Silicon bundle validation, but is not notarized.
+            v0.3.2 improves H1-H6 heading hierarchy, high-contrast light/dark code highlighting, Typora-style code block language search, and the cross-platform LumenMark icon. The Windows installer includes the WebView2 offline installer. The macOS DMG uses the system WebKit runtime, so installation and launch do not download an additional runtime. Test build for Windows x64 and macOS Apple Silicon. The Windows installer is unsigned. The macOS app bundle is ad-hoc signed to support Apple Silicon bundle validation, but is not notarized.
 
             Windows may display a SmartScreen warning. macOS users may need to allow the application through Finder Open or Privacy & Security on first launch.
           releaseDraft: false

@@ -8,7 +8,8 @@ LumenMark 是一款面向 Windows 10/11 x64 与 macOS Apple Silicon 的本地 Ma
 
 - 启动后直接进入未命名空白文档；使用 `Ctrl+S`（Windows）或 `Cmd+S`（macOS）首次另存为 `.md`。
 - 通过 Milkdown Crepe 直接编辑排版后的 Markdown；可打开文件、打开工作区、拖入 `.md`，或使用系统“打开方式”。
-- 直接编辑 GFM 表格与任务列表、KaTeX 数学公式、Mermaid 流程图，以及具有高亮的 JSON、SQL、Shell、Python、Java 代码块。
+- 直接编辑 GFM 表格与任务列表、KaTeX 数学公式、Mermaid 流程图，以及具有高对比高亮的 JSON、Java、Python、Shell、SQL、Markdown、Mermaid、Text 代码块。
+- 输入三个反引号后继续输入字母可检索代码块语言，例如输入 ```` ```j ```` 会显示 `json` 与 `java`，回车或点击即可创建对应代码块。
 - 使用实时大纲定位标题，并在文档内执行查找和替换。
 - 代码块可复制，但软件不会执行代码，也不会把代码块导出到磁盘。
 - 默认不执行 Markdown 原始 HTML，并限制本地图片与文档读写只能位于选定的安全目录内。
@@ -37,9 +38,13 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## 安装包与首次运行
 
-推送 `v0.3.1` 版本标签后，GitHub Release 会生成：
+推送 `v0.3.2` 版本标签后，GitHub Release 会生成：
 
 - Windows x64 的 `LumenMark_<version>_x64-setup.exe`（NSIS 用户级安装，包含 WebView2 离线安装器）。
 - macOS Apple Silicon 的 `LumenMark_<version>_aarch64.dmg`。
 
-`v0.3.1` 修复 Windows 离线安装路径，并改进标题层级视觉、回车确认 Markdown 快捷样式以及 fenced code block 高亮。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+`v0.3.2` 改进 H1-H6 标题层级样式、浅色/深色代码高亮、Typora 式代码块语言检索，并加入跨平台 LumenMark 图标。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 使用系统 WebKit，因此 `.dmg` 体积明显小于 Windows 安装包是正常结果；安装和启动不需要下载额外运行时。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+
+## 图标
+
+应用图标由项目内生成资产创建，源文件位于 `assets/lumenmark-icon.svg`，不依赖外部版权图标。Tauri 打包会使用同一套 `icns`、`ico` 与 PNG 图标资源。

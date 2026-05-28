@@ -1,5 +1,6 @@
 import { java } from "@codemirror/lang-java";
 import { json } from "@codemirror/lang-json";
+import { markdown } from "@codemirror/lang-markdown";
 import { python } from "@codemirror/lang-python";
 import { PostgreSQL, sql } from "@codemirror/lang-sql";
 import { LanguageDescription, LanguageSupport, StreamLanguage } from "@codemirror/language";
@@ -17,10 +18,16 @@ import { table } from "@milkdown/crepe/feature/table";
 import { toolbar } from "@milkdown/crepe/feature/toolbar";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
-import { githubLight } from "@uiw/codemirror-theme-github";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Messages } from "../i18n";
-import { enterConfirmedMarkdownShortcuts, normalizeCodeLanguage } from "../features/editor/markdown-shortcuts";
+import { lumenCodeTheme } from "../features/editor/code-theme";
+import {
+  CODE_LANGUAGE_SELECTED_EVENT,
+  type CodeFenceSearchState,
+  codeLanguageOptions,
+  enterConfirmedMarkdownShortcutsWithSearch,
+  normalizeCodeLanguage,
+} from "../features/editor/markdown-shortcuts";
 import { renderMermaidPreview } from "../features/editor/mermaid-preview";
 
 interface VisualMarkdownEditorProps {
@@ -42,23 +49,20 @@ const codeLanguages = [
     support: new LanguageSupport(StreamLanguage.define(shell)),
   }),
   LanguageDescription.of({ name: "Python", alias: ["python", "py"], extensions: ["py"], support: python() }),
+  LanguageDescription.of({ name: "Markdown", alias: ["markdown", "md"], extensions: ["md"], support: markdown() }),
+  LanguageDescription.of({ name: "Mermaid", alias: ["mermaid", "mmd"], extensions: ["mmd"], support: markdown() }),
+  LanguageDescription.of({ name: "Text", alias: ["text", "txt"], extensions: ["txt"], support: markdown() }),
 ];
 
 function renderCodeLanguage(language: string): string {
   const normalized = normalizeCodeLanguage(language);
-  const labels: Record<string, string> = {
-    java: "Java",
-    json: "JSON",
-    sql: "SQL",
-    shell: "Shell",
-    python: "Python",
-  };
-  return labels[normalized] ?? (language || "Text");
+  return codeLanguageOptions.find((option) => option.id === normalized)?.label ?? (language || "Text");
 }
 
 export function VisualMarkdownEditor({ labels, title, value, onChange, resolveImage }: VisualMarkdownEditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null);
   const changeHandler = useRef(onChange);
+  const [languageSearch, setLanguageSearch] = useState<CodeFenceSearchState | null>(null);
 
   useEffect(() => {
     changeHandler.current = onChange;
@@ -71,7 +75,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
       defaultValue: value,
     })
       .addFeature(cursor)
-      .addFeature(enterConfirmedMarkdownShortcuts)
+      .addFeature(enterConfirmedMarkdownShortcutsWithSearch(setLanguageSearch))
       .addFeature(listItem)
       .addFeature(linkTooltip)
       .addFeature(imageBlock, {
@@ -85,7 +89,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
       .addFeature(toolbar)
       .addFeature(codeMirror, {
           languages: codeLanguages,
-          theme: githubLight,
+          theme: lumenCodeTheme,
           copyText: labels.copy,
           searchPlaceholder: labels.find,
           renderLanguage: (language) => renderCodeLanguage(language),
@@ -128,6 +132,28 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
         <h1>{title}</h1>
       </header>
       <div className="crepe-root" ref={editorRoot} />
+      {languageSearch ? (
+        <div
+          className="code-language-search"
+          style={{ top: languageSearch.top, left: languageSearch.left }}
+          role="listbox"
+          aria-label="Code block language"
+        >
+          {languageSearch.suggestions.map((language) => (
+            <button
+              key={language.id}
+              type="button"
+              role="option"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent(CODE_LANGUAGE_SELECTED_EVENT, { detail: language.id }));
+              }}
+            >
+              {language.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }
