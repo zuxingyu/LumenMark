@@ -17,8 +17,10 @@ import { table } from "@milkdown/crepe/feature/table";
 import { toolbar } from "@milkdown/crepe/feature/toolbar";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
+import { githubLight } from "@uiw/codemirror-theme-github";
 import { useEffect, useRef } from "react";
 import type { Messages } from "../i18n";
+import { enterConfirmedMarkdownShortcuts, normalizeCodeLanguage } from "../features/editor/markdown-shortcuts";
 import { renderMermaidPreview } from "../features/editor/mermaid-preview";
 
 interface VisualMarkdownEditorProps {
@@ -42,6 +44,18 @@ const codeLanguages = [
   LanguageDescription.of({ name: "Python", alias: ["python", "py"], extensions: ["py"], support: python() }),
 ];
 
+function renderCodeLanguage(language: string): string {
+  const normalized = normalizeCodeLanguage(language);
+  const labels: Record<string, string> = {
+    java: "Java",
+    json: "JSON",
+    sql: "SQL",
+    shell: "Shell",
+    python: "Python",
+  };
+  return labels[normalized] ?? (language || "Text");
+}
+
 export function VisualMarkdownEditor({ labels, title, value, onChange, resolveImage }: VisualMarkdownEditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null);
   const changeHandler = useRef(onChange);
@@ -57,6 +71,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
       defaultValue: value,
     })
       .addFeature(cursor)
+      .addFeature(enterConfirmedMarkdownShortcuts)
       .addFeature(listItem)
       .addFeature(linkTooltip)
       .addFeature(imageBlock, {
@@ -70,8 +85,10 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
       .addFeature(toolbar)
       .addFeature(codeMirror, {
           languages: codeLanguages,
+          theme: githubLight,
           copyText: labels.copy,
           searchPlaceholder: labels.find,
+          renderLanguage: (language) => renderCodeLanguage(language),
           previewLabel: "Mermaid",
           previewLoading: labels.diagramLoading,
           renderPreview: (language, source, applyPreview) => {

@@ -37,9 +37,9 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## 安装包与首次运行
 
-推送 `v0.3.0` 版本标签后，GitHub Release 会生成：
+推送 `v0.3.1` 版本标签后，GitHub Release 会生成：
 
-- Windows x64 的 `LumenMark_<version>_x64-setup.exe`（NSIS 用户级安装，包含 WebView2 引导安装配置）。
+- Windows x64 的 `LumenMark_<version>_x64-setup.exe`（NSIS 用户级安装，包含 WebView2 离线安装器）。
 - macOS Apple Silicon 的 `LumenMark_<version>_aarch64.dmg`。
 
-`v0.3.0` 新增直接编辑与桌面 Markdown 文件集成，并保留 `v0.2.2` 中的窗口关闭修复。该版本仍为测试版本。Windows 安装包未签名；macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+`v0.3.1` 修复 Windows 离线安装路径，并改进标题层级视觉、回车确认 Markdown 快捷样式以及 fenced code block 高亮。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。

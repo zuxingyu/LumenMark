@@ -371,6 +371,49 @@ button.primary:hover:not(:disabled) {
   min-height: calc(100vh - 185px);
 }
 
+.crepe-root h1,
+.crepe-root h2,
+.crepe-root h3 {
+  color: var(--text);
+  letter-spacing: -0.025em;
+}
+
+.crepe-root h1 {
+  margin: 34px 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 36px;
+  line-height: 1.18;
+  font-weight: 750;
+}
+
+.crepe-root h2 {
+  margin: 30px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  font-size: 27px;
+  line-height: 1.24;
+  font-weight: 700;
+}
+
+.crepe-root h3 {
+  margin: 24px 0 10px;
+  padding-left: 10px;
+  border-left: 3px solid var(--accent);
+  font-size: 21px;
+  line-height: 1.32;
+  font-weight: 650;
+}
+
+.crepe-root .cm-editor,
+.crepe-root .cm-scroller {
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+}
+
+.crepe-root .cm-content {
+  caret-color: var(--text);
+}
+
 .welcome {
   height: 100%;
   max-width: 470px;
