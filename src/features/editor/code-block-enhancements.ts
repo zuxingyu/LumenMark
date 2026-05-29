@@ -12,10 +12,10 @@ export function getNextCodeLineIndent(line: string): string {
   return /(?:[{[(]|=>|then|do)\s*$/.test(trimmed) ? `${currentIndent}  ` : currentIndent;
 }
 
-function updateIconButton(button: HTMLButtonElement, label: string, icon: string) {
-  button.title = label;
-  button.setAttribute("aria-label", label);
-  button.innerHTML = icon;
+export function syncIconButton(button: HTMLButtonElement, label: string, icon: string) {
+  if (button.title !== label) button.title = label;
+  if (button.getAttribute("aria-label") !== label) button.setAttribute("aria-label", label);
+  if (button.innerHTML !== icon) button.innerHTML = icon;
 }
 
 function findCopyButton(block: HTMLElement): HTMLButtonElement | null {
@@ -40,7 +40,7 @@ export function enhanceCodeBlockControls(root: HTMLElement, labels: CodeBlockCon
 
       const copyButton = findCopyButton(block);
       if (copyButton && copyButton.parentElement !== toolbar) toolbar.prepend(copyButton);
-      if (copyButton) updateIconButton(copyButton, labels.copyLabel, copyIcon);
+      if (copyButton) syncIconButton(copyButton, labels.copyLabel, copyIcon);
 
       let button = block.querySelector<HTMLButtonElement>(".code-wrap-toggle");
       if (!button) {
@@ -56,7 +56,7 @@ export function enhanceCodeBlockControls(root: HTMLElement, labels: CodeBlockCon
         });
         toolbar.append(button);
       }
-      updateIconButton(button, labels.wrapLabel, wrapIcon);
+      syncIconButton(button, labels.wrapLabel, wrapIcon);
     });
   };
 

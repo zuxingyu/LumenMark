@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { enhanceCodeBlockControls } from "./code-block-enhancements";
+import { enhanceCodeBlockControls, syncIconButton } from "./code-block-enhancements";
 
 describe("code block enhancements", () => {
   it("adds an independent wrap toggle to each code block", () => {
@@ -43,5 +43,20 @@ describe("code block enhancements", () => {
     expect(toolbar?.querySelector(".code-wrap-toggle")).toBeTruthy();
     expect(toolbar?.textContent).not.toContain("Copy");
     expect(toolbar?.textContent).not.toContain("Wrap code");
+  });
+
+  it("does not rewrite unchanged icon buttons during observer refreshes", () => {
+    const button = document.createElement("button");
+    const icon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h13"></path></svg>`;
+
+    syncIconButton(button, "Wrap code", icon);
+    const firstIconNode = button.firstChild;
+
+    syncIconButton(button, "Wrap code", icon);
+
+    expect(button.firstChild).toBe(firstIconNode);
+    expect(button.innerHTML).toBe(icon);
+    expect(button).toHaveAttribute("aria-label", "Wrap code");
+    expect(button).toHaveAttribute("title", "Wrap code");
   });
 });
