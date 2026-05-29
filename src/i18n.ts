@@ -47,6 +47,13 @@ export const messages = {
     operationFailed: "操作失败",
     untitled: "未命名",
     outline: "文档大纲",
+    restoreDraftTitle: "恢复草稿？",
+    restoreDraftBody: "发现 {time} 保存的本地草稿。",
+    restore: "恢复",
+    workspaceSearch: "工作区搜索",
+    searchWorkspace: "搜索工作区",
+    lineLabel: "第 {line} 行",
+    noSearchResults: "没有找到匹配项",
   },
   "en-US": {
     openFile: "Open File",
@@ -91,6 +98,13 @@ export const messages = {
     operationFailed: "Operation failed",
     untitled: "Untitled",
     outline: "Outline",
+    restoreDraftTitle: "Restore draft?",
+    restoreDraftBody: "A local draft saved at {time} was found.",
+    restore: "Restore",
+    workspaceSearch: "Workspace Search",
+    searchWorkspace: "Search Workspace",
+    lineLabel: "line {line}",
+    noSearchResults: "No matches found",
   },
 } as const;
 

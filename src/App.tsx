@@ -1,13 +1,16 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FindReplaceBar } from "./components/FindReplaceBar";
+import { RecoveryDialog } from "./components/RecoveryDialog";
 import { Sidebar } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
 import { UnsavedDialog } from "./components/UnsavedDialog";
+import { WorkspaceSearchPanel } from "./components/WorkspaceSearchPanel";
+import { clearDraft, loadDraft, saveDraft, sessionFromDraft, shouldPersistDraft, type RecoveryDraft } from "./features/document/draft";
 import { createOpenedSession, createUntitledSession, editSession, markSaved } from "./features/document/session";
 import { buildOutline } from "./features/editor/document-tools";
 import { initialLocale, LOCALE_KEY, messages, RECENT_WORKSPACES_KEY, type Locale } from "./i18n";
 import { createDemoApi, firstMarkdownPath, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
-import type { DocumentSession, OpenedDocument, RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "./types";
+import type { DocumentSession, OpenedDocument, RecentWorkspace, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "./types";
 
 interface AppProps {
   api?: DesktopApi;
@@ -44,6 +47,9 @@ export function App({ api: providedApi }: AppProps) {
   const [session, setSession] = useState<DocumentSession>(() => createUntitledSession(messages[initialLocale()].untitled));
   const [editorKey, setEditorKey] = useState(0);
   const [findVisible, setFindVisible] = useState(false);
+  const [searchResults, setSearchResults] = useState<WorkspaceSearchResult[]>([]);
+  const [searchRevealText, setSearchRevealText] = useState<string>();
+  const [pendingDraft, setPendingDraft] = useState<RecoveryDraft | null>(() => loadDraft());
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [status, setStatus] = useState<string>(() => messages[initialLocale()].ready);
   const [error, setError] = useState<string>();
@@ -55,7 +61,8 @@ export function App({ api: providedApi }: AppProps) {
   const outline = useMemo(() => buildOutline(session.sourceText), [session.sourceText]);
   const assetContext = session.root && session.path ? { root: session.root, path: session.path } : null;
 
-  function replaceSession(next: DocumentSession) {
+  function replaceSession(next: DocumentSession, revealText?: string) {
+    setSearchRevealText(revealText);
     setSession(next);
     setEditorKey((current) => current + 1);
   }
@@ -63,6 +70,13 @@ export function App({ api: providedApi }: AppProps) {
   useEffect(() => {
     localStorage.setItem(RECENT_WORKSPACES_KEY, JSON.stringify(recentWorkspaces));
   }, [recentWorkspaces]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (shouldPersistDraft(session)) saveDraft(session);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [session]);
 
   function changeLocale() {
     const next = locale === "zh-CN" ? "en-US" : "zh-CN";
@@ -89,11 +103,13 @@ export function App({ api: providedApi }: AppProps) {
         const saved = await api.saveNewMarkdownFile(session.sourceText);
         if (!saved) return false;
         replaceSession(markSaved(createOpenedSession("single-file", saved.root, saved.relativePath, session.sourceText)));
+        clearDraft();
         setStatus(locale === "zh-CN" ? `已保存 ${saved.name}` : `Saved ${saved.name}`);
       } else {
         if (!session.root || !session.path) return false;
         await api.writeMarkdownFile(session.root, session.path, session.sourceText);
         setSession((current) => markSaved(current));
+        clearDraft();
         setStatus(locale === "zh-CN" ? `已保存 ${session.path}` : `Saved ${session.path}`);
       }
       setError(undefined);
@@ -331,6 +347,24 @@ export function App({ api: providedApi }: AppProps) {
     setEditorKey((current) => current + 1);
   }
 
+  function searchWorkspace(query: string) {
+    if (!workspace) return;
+    void attempt(async () => {
+      const results = await api.searchWorkspace(workspace.root, query);
+      setSearchResults(results);
+      setStatus(locale === "zh-CN" ? `找到 ${results.length} 个匹配项` : `Found ${results.length} matches`);
+    });
+  }
+
+  function openSearchResult(result: WorkspaceSearchResult) {
+    if (!workspace) return;
+    afterDirty(async () => {
+      const document = await api.readMarkdownFile(workspace.root, result.relativePath);
+      replaceSession(createOpenedSession("workspace", workspace.root, document.relativePath, document.content), result.excerpt);
+      setStatus(locale === "zh-CN" ? `已打开 ${result.name} 第 ${result.line} 行` : `Opened ${result.name} line ${result.line}`);
+    });
+  }
+
   return (
     <div className="app-shell">
       <Toolbar
@@ -361,12 +395,24 @@ export function App({ api: providedApi }: AppProps) {
         />
         <main className="document-surface">
           {findVisible ? (
-            <FindReplaceBar
-              labels={labels}
-              source={session.sourceText}
-              onReplace={replaceFromFind}
-              onClose={() => setFindVisible(false)}
-            />
+            <div className="find-stack">
+              <FindReplaceBar
+                labels={labels}
+                source={session.sourceText}
+                onReplace={replaceFromFind}
+                onClose={() => {
+                  setFindVisible(false);
+                  setSearchResults([]);
+                }}
+              />
+              <WorkspaceSearchPanel
+                labels={labels}
+                disabled={!workspace}
+                results={searchResults}
+                onSearch={searchWorkspace}
+                onOpenResult={openSearchResult}
+              />
+            </div>
           ) : null}
           <Suspense fallback={<div className="surface-loading">{labels.loading}</div>}>
             <VisualMarkdownEditor
@@ -375,6 +421,7 @@ export function App({ api: providedApi }: AppProps) {
               title={session.title}
               value={session.sourceText}
               onChange={(value) => setSession((current) => editSession(current, value))}
+              revealText={searchRevealText}
               resolveImage={assetContext
                 ? (source) => api.readWorkspaceAsset(assetContext.root, assetContext.path, source)
                 : undefined}
@@ -403,6 +450,21 @@ export function App({ api: providedApi }: AppProps) {
                 void attempt(action);
               }
             });
+          }}
+        />
+      ) : null}
+      {pendingDraft ? (
+        <RecoveryDialog
+          labels={labels}
+          draft={pendingDraft}
+          onDiscard={() => {
+            clearDraft();
+            setPendingDraft(null);
+          }}
+          onRestore={() => {
+            replaceSession(sessionFromDraft(pendingDraft));
+            setPendingDraft(null);
+            setStatus(locale === "zh-CN" ? "已恢复本地草稿" : "Local draft restored");
           }}
         />
       ) : null}

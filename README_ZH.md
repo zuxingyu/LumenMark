@@ -12,7 +12,8 @@ LumenMark 是一款面向 Windows 10/11 x64 与 macOS Apple Silicon 的本地 Ma
 - 直接编辑 GFM 表格与任务列表、KaTeX 数学公式、Mermaid 流程图，以及具有高对比高亮的 JSON、Java、Python、Shell、SQL、YAML、Markdown、Mermaid、Text 代码块。
 - 输入三个反引号后继续输入字母可检索代码块语言，例如输入 ```` ```j ```` 会显示 `json` 与 `java`，回车或点击即可创建对应代码块。
 - 使用 macOS 与 Windows 原生“格式 Format”菜单手动应用段落、H1-H6、引用、列表、代码块、链接和行内文本格式。
-- 使用实时大纲定位标题，并在文档内执行查找和替换。
+- 使用实时大纲定位标题，在文档内执行查找和替换，并搜索当前工作区内的 Markdown 文件。
+- 重启或异常退出后可恢复本地草稿；草稿恢复不会在用户保存前覆盖原始文件。
 - 代码块可复制，但软件不会执行代码，也不会把代码块导出到磁盘。
 - 默认不执行 Markdown 原始 HTML，并限制本地图片与文档读写只能位于选定的安全目录内。
 - 默认使用简体中文，可在工具栏切换英文界面。
@@ -40,12 +41,20 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## 安装包与首次运行
 
-推送 `v0.3.3` 版本标签后，GitHub Release 会生成：
+推送 `v0.3.4` 版本标签后，GitHub Release 会生成：
 
 - Windows x64 的 `LumenMark_<version>_x64-setup.exe`（NSIS 用户级安装，包含 WebView2 离线安装器）。
 - macOS Apple Silicon 的 `LumenMark_<version>_aarch64.dmg`。
 
-`v0.3.3` 修复 Markdown 源文本粘贴解析，新增 YAML/YML 代码块高亮和语言检索，Mermaid 块在光标离开后会回到流程图预览，并增加原生“格式 Format”菜单。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 使用系统 WebKit，因此 `.dmg` 体积明显小于 Windows 安装包是正常结果；安装和启动不需要下载额外运行时。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+`v0.3.4` 恢复左侧栏独立滚动，隐藏 Mermaid 手动预览切换按钮并在光标离开后自动回到流程图预览，放宽正文编辑宽度，新增本地草稿恢复和工作区 Markdown 全文搜索。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 使用系统 WebKit，因此 `.dmg` 体积明显小于 Windows 安装包是正常结果；安装和启动不需要下载额外运行时。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+
+## 后续路线
+
+- `v0.3.5`：PDF、HTML 与图片导出。
+- `v0.3.6`：主题、字体、阅读宽度与代码主题设置。
+- `v0.3.7`：大纲固定、标题折叠和更强的大纲/编辑器同步。
+- `v0.3.8`：Mermaid 与数学公式模板，以及更友好的错误提示。
+- `v0.4.0`：签名、公证、自动更新与安装包校验。
 
 ## 图标
 

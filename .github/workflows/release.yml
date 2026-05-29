@@ -45,7 +45,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: LumenMark ${{ github.ref_name }}
           releaseBody: |
-            v0.3.3 fixes Markdown source paste parsing, adds YAML/YML code block highlighting and language search, switches Mermaid blocks back to diagram preview when focus leaves the block, and adds a native Format menu for common Markdown commands. The Windows installer includes the WebView2 offline installer. The macOS DMG uses the system WebKit runtime, so installation and launch do not download an additional runtime. Test build for Windows x64 and macOS Apple Silicon. The Windows installer is unsigned. The macOS app bundle is ad-hoc signed to support Apple Silicon bundle validation, but is not notarized.
+            v0.3.4 restores sidebar scrolling, keeps Mermaid diagrams in automatic focus-to-edit and blur-to-preview mode without a manual preview toggle, widens the writing surface, adds local draft recovery, and adds workspace-wide Markdown search. The Windows installer includes the WebView2 offline installer. The macOS DMG uses the system WebKit runtime, so installation and launch do not download an additional runtime. Test build for Windows x64 and macOS Apple Silicon. The Windows installer is unsigned. The macOS app bundle is ad-hoc signed to support Apple Silicon bundle validation, but is not notarized.
 
             Windows may display a SmartScreen warning. macOS users may need to allow the application through Finder Open or Privacy & Security on first launch.
           releaseDraft: false

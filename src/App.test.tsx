@@ -23,6 +23,7 @@ const api: DesktopApi = {
   writeMarkdownFile: async () => ({ success: true }),
   createMarkdownFile: async () => ({ name: "new.md", relativePath: "new.md", kind: "markdown", childrenLoaded: false }),
   renameMarkdownEntry: async () => ({ name: "guide.md", relativePath: "guide.md", kind: "markdown", childrenLoaded: false }),
+  searchWorkspace: async () => [],
   readWorkspaceAsset: async (_root, _documentPath, source) => source,
   saveNewMarkdownFile: async (content) => ({
     root: "/new",
@@ -170,6 +171,51 @@ describe("LumenMark app shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "全部替换" }));
 
     expect(screen.getByText("beta beta")).toBeVisible();
+  });
+
+  it("searches the active workspace and opens a selected result", async () => {
+    const readMarkdownFile = vi.fn().mockResolvedValue({ relativePath: "guide.md", content: "# Search Hit" });
+    render(<App api={{
+      ...api,
+      readMarkdownFile,
+      searchWorkspace: async (_root, query) => [{
+        relativePath: "guide.md",
+        name: "guide.md",
+        line: 3,
+        excerpt: `contains ${query}`,
+      }],
+    }} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
+
+    fireEvent.click(screen.getByRole("button", { name: "查找" }));
+    fireEvent.change(screen.getByLabelText("工作区搜索"), { target: { value: "Search" } });
+    fireEvent.click(screen.getByRole("button", { name: "搜索工作区" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /guide.md 第 3 行/ })).toBeVisible());
+    fireEvent.click(screen.getByRole("button", { name: /guide.md 第 3 行/ }));
+
+    await waitFor(() => expect(readMarkdownFile).toHaveBeenCalledWith("/docs", "guide.md"));
+    expect(screen.getByText("# Search Hit")).toBeVisible();
+  });
+
+  it("offers to restore a saved local draft on startup", async () => {
+    localStorage.setItem("lumenmark.recoveryDraft", JSON.stringify({
+      sourceKind: "untitled",
+      root: null,
+      path: null,
+      title: "未命名",
+      sourceText: "# Recovered",
+      savedText: "",
+      updatedAt: "2026-05-29T04:00:00.000Z",
+    }));
+
+    render(<App api={api} />);
+
+    expect(screen.getByRole("dialog", { name: "恢复草稿？" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "恢复" }));
+
+    await waitFor(() => expect(screen.getByText("# Recovered")).toBeVisible());
   });
 
   it("opens a pending desktop-delivered Markdown file on startup", async () => {

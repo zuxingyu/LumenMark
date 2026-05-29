@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { DocumentContent, OpenedDocument, WorkspaceEntry, WorkspaceInfo } from "../types";
+import type { DocumentContent, OpenedDocument, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "../types";
 
 export interface DesktopApi {
   selectWorkspace(): Promise<WorkspaceInfo | null>;
@@ -13,6 +13,7 @@ export interface DesktopApi {
   pendingExternalDocuments(): Promise<OpenedDocument[]>;
   createMarkdownFile(root: string, relativePath: string): Promise<WorkspaceEntry>;
   renameMarkdownEntry(root: string, from: string, to: string): Promise<WorkspaceEntry>;
+  searchWorkspace(root: string, query: string): Promise<WorkspaceSearchResult[]>;
 }
 
 export const tauriApi: DesktopApi = {
@@ -28,6 +29,7 @@ export const tauriApi: DesktopApi = {
   pendingExternalDocuments: () => invoke("pending_external_documents"),
   createMarkdownFile: (root, relativePath) => invoke("create_markdown_file", { root, relativePath }),
   renameMarkdownEntry: (root, from, to) => invoke("rename_markdown_entry", { root, from, to }),
+  searchWorkspace: (root, query) => invoke("search_workspace", { root, query }),
 };
 
 const sampleMarkdown = `# Service Deployment Notes
@@ -111,5 +113,13 @@ export function createDemoApi(): DesktopApi {
       entry.relativePath = to;
       return entry;
     },
+    searchWorkspace: async (_root, query) => documents
+      .filter(() => source.toLowerCase().includes(query.toLowerCase()))
+      .map((document) => ({
+        relativePath: document.relativePath,
+        name: document.name,
+        line: 1,
+        excerpt: source.split("\n").find((line) => line.toLowerCase().includes(query.toLowerCase())) ?? source,
+      })),
   };
 }

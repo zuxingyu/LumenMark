@@ -39,6 +39,7 @@ interface VisualMarkdownEditorProps {
   value: string;
   onChange(value: string): void;
   resolveImage?(source: string): Promise<string>;
+  revealText?: string;
 }
 
 const codeLanguages = [
@@ -63,7 +64,7 @@ function renderCodeLanguage(language: string): string {
   return codeLanguageOptions.find((option) => option.id === normalized)?.label ?? (language || "Text");
 }
 
-export function VisualMarkdownEditor({ labels, title, value, onChange, resolveImage }: VisualMarkdownEditorProps) {
+export function VisualMarkdownEditor({ labels, title, value, onChange, resolveImage, revealText }: VisualMarkdownEditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null);
   const changeHandler = useRef(onChange);
   const [languageSearch, setLanguageSearch] = useState<CodeFenceSearchState | null>(null);
@@ -117,7 +118,17 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
     editor.on((listener) => {
       listener.markdownUpdated((_ctx, markdown) => changeHandler.current(markdown));
     });
-    void editor.create();
+    void editor.create().then(() => {
+      if (!revealText?.trim()) return;
+      window.setTimeout(() => {
+        const normalized = revealText.trim().replace(/\s+/g, " ");
+        const candidates = Array.from(editorRoot.current?.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6, p, li, pre") ?? []);
+        const target = candidates.find((element) => (element.textContent ?? "").replace(/\s+/g, " ").includes(normalized));
+        target?.scrollIntoView({ block: "center" });
+        target?.classList.add("search-reveal");
+        window.setTimeout(() => target?.classList.remove("search-reveal"), 1600);
+      });
+    });
     function focusHeading(event: Event) {
       const id = (event as CustomEvent<string>).detail;
       const index = Number(id.replace("heading-", ""));

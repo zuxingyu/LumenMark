@@ -34,6 +34,13 @@ export interface OpenedDocument extends DocumentContent {
   name: string;
 }
 
+export interface WorkspaceSearchResult {
+  relativePath: string;
+  name: string;
+  line: number;
+  excerpt: string;
+}
+
 export interface DocumentContext {
   kind: Exclude<SourceKind, "untitled">;
   root: string;

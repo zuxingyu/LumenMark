@@ -49,6 +49,15 @@ pub struct OperationResult {
     pub success: bool,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceSearchResult {
+    pub relative_path: String,
+    pub name: String,
+    pub line: usize,
+    pub excerpt: String,
+}
+
 #[derive(Default)]
 struct ExternalDocumentState {
     pending: Mutex<Vec<OpenedDocument>>,
@@ -220,6 +229,12 @@ fn require_markdown(path: &Path) -> CommandResult<()> {
         Some(extension) if extension.eq_ignore_ascii_case("md") => Ok(()),
         _ => Err("LumenMark only manages Markdown (.md) documents.".to_string()),
     }
+}
+
+fn is_hidden_path(path: &Path) -> bool {
+    path.components().any(|part| {
+        matches!(part, Component::Normal(name) if name.to_string_lossy().starts_with('.'))
+    })
 }
 
 pub fn read_asset_data_url(
@@ -419,6 +434,69 @@ fn read_markdown_file(root: String, relative_path: String) -> CommandResult<Docu
     })
 }
 
+const SEARCH_MAX_FILE_BYTES: u64 = 1_000_000;
+
+fn collect_markdown_files(root: &Path, directory: &Path, files: &mut Vec<PathBuf>) -> CommandResult<()> {
+    for entry in fs::read_dir(directory).map_err(|error| format!("Unable to search folder: {error}"))? {
+        let path = entry
+            .map_err(|error| format!("Unable to search entry: {error}"))?
+            .path();
+        if path != root && is_hidden_path(path.strip_prefix(root).unwrap_or(&path)) {
+            continue;
+        }
+        if path.is_dir() {
+            collect_markdown_files(root, &path, files)?;
+        } else if require_markdown(&path).is_ok() {
+            files.push(path);
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn search_workspace(root: String, query: String) -> CommandResult<Vec<WorkspaceSearchResult>> {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+    let root_path = Path::new(&root)
+        .canonicalize()
+        .map_err(|error| format!("Unable to access workspace: {error}"))?;
+    let mut files = Vec::new();
+    collect_markdown_files(&root_path, &root_path, &mut files)?;
+    files.sort();
+
+    let mut results = Vec::new();
+    for file in files {
+        if fs::metadata(&file)
+            .map(|metadata| metadata.len() > SEARCH_MAX_FILE_BYTES)
+            .unwrap_or(true)
+        {
+            continue;
+        }
+        let content = match fs::read_to_string(&file) {
+            Ok(content) => content,
+            Err(_) => continue,
+        };
+        for (index, line) in content.lines().enumerate() {
+            if line.to_lowercase().contains(&query) {
+                let name = file
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or_default()
+                    .to_string();
+                results.push(WorkspaceSearchResult {
+                    relative_path: relative_string(&root_path, &file)?,
+                    name,
+                    line: index + 1,
+                    excerpt: line.trim().to_string(),
+                });
+            }
+        }
+    }
+    Ok(results)
+}
+
 #[tauri::command]
 fn read_workspace_asset(
     root: String,
@@ -534,7 +612,8 @@ pub fn run() {
             read_workspace_asset,
             write_markdown_file,
             create_markdown_file,
-            rename_markdown_entry
+            rename_markdown_entry,
+            search_workspace
         ])
         .build(tauri::generate_context!())
         .expect("error while building LumenMark")
@@ -675,6 +754,27 @@ mod tests {
         let config = include_str!("../tauri.conf.json");
         assert!(config.contains("\"type\": \"offlineInstaller\""));
         assert!(!config.contains("\"type\": \"downloadBootstrapper\""));
+    }
+
+    #[test]
+    fn searches_markdown_files_inside_workspace_only() {
+        let root = tempdir().expect("temp search");
+        fs::create_dir(root.path().join("docs")).expect("docs");
+        fs::create_dir(root.path().join(".git")).expect("hidden");
+        fs::write(root.path().join("docs/guide.md"), "first\nneedle here\nlast").expect("fixture");
+        fs::write(root.path().join("notes.txt"), "needle").expect("ignored");
+        fs::write(root.path().join(".git/hidden.md"), "needle").expect("hidden fixture");
+
+        let results = super::search_workspace(
+            root.path().to_string_lossy().to_string(),
+            "needle".to_string(),
+        )
+        .expect("search results");
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].relative_path, "docs/guide.md");
+        assert_eq!(results[0].line, 2);
+        assert_eq!(results[0].excerpt, "needle here");
     }
 
     #[test]
