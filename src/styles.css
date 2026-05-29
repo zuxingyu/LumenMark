@@ -136,7 +136,7 @@ button.primary:hover:not(:disabled) {
   display: flex;
   align-items: center;
   padding: 0 18px;
-  gap: 32px;
+  gap: 24px;
   border-bottom: 1px solid var(--border);
   background: var(--chrome);
   backdrop-filter: blur(18px);
@@ -167,12 +167,13 @@ button.primary:hover:not(:disabled) {
 
 .toolbar-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .toolbar-actions button {
   height: 38px;
-  padding: 0 14px;
+  padding: 0 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -206,7 +207,7 @@ button.primary:hover:not(:disabled) {
   min-height: 0;
   padding: 22px 12px;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   border-right: 1px solid var(--border);
   background: var(--sidebar);
 }
@@ -335,7 +336,8 @@ button.primary:hover:not(:disabled) {
 }
 
 .tree-item {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border: 0;
   padding: 9px 10px;
   display: flex;
@@ -566,10 +568,10 @@ button.primary:hover:not(:disabled) {
 
 .visual-editor {
   position: relative;
-  max-width: 1240px;
+  max-width: 1360px;
   min-height: 100%;
   margin: 0 auto;
-  padding: 34px clamp(28px, 5vw, 72px) 70px;
+  padding: 28px clamp(24px, 4vw, 56px) 70px;
 }
 
 .visual-document-header {
@@ -584,25 +586,66 @@ button.primary:hover:not(:disabled) {
 }
 
 .crepe-root {
-  min-height: calc(100vh - 185px);
+  min-height: calc(100vh - 150px);
+  color: var(--text);
+}
+
+.crepe-root .milkdown,
+.crepe-root .ProseMirror,
+.crepe-root [contenteditable="true"] {
+  color: var(--text);
+  background: var(--page);
+}
+
+.crepe-root .milkdown-block-handle,
+.crepe-root .milkdown-slash-menu,
+.crepe-root [data-block-handle],
+.crepe-root [data-crepe-block-handle],
+.crepe-root [data-milkdown-block-handle],
+.crepe-root button[aria-label*="Add"],
+.crepe-root button[aria-label*="Drag"],
+.crepe-root button[aria-label*="新增"],
+.crepe-root button[aria-label*="拖拽"] {
+  display: none !important;
 }
 
 .crepe-root .milkdown-code-block {
   position: relative;
 }
 
-.code-wrap-toggle {
+.code-block-tools {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   top: 8px;
   right: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.code-block-tools button,
+.code-wrap-toggle {
+  width: 28px;
   height: 26px;
-  padding: 0 8px;
+  padding: 0;
+  display: grid;
+  place-items: center;
   border: 1px solid var(--code-border);
   border-radius: 6px;
   color: var(--muted);
   background: var(--page);
   font-size: 12px;
+}
+
+.code-block-tools svg,
+.code-wrap-toggle svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .code-wrap-toggle[aria-pressed="false"] {
@@ -706,6 +749,14 @@ button.primary:hover:not(:disabled) {
   display: none !important;
 }
 
+.crepe-root .milkdown-code-block .language-button,
+.crepe-root .milkdown-code-block .tools-button-group,
+.crepe-root .milkdown-code-block .code-block-tools,
+.crepe-root .milkdown-code-block button {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 .code-language-search {
   position: absolute;
   z-index: 8;
@@ -732,9 +783,23 @@ button.primary:hover:not(:disabled) {
 }
 
 .code-language-search button:hover,
-.code-language-search button:first-child {
+.code-language-search button.selected,
+.code-language-search button[aria-selected="true"] {
   color: var(--accent);
   background: var(--accent-soft);
+}
+
+.export-capture-host {
+  position: fixed;
+  left: -200vw;
+  top: 0;
+  width: 1040px;
+  background: var(--page);
+}
+
+.export-capture-host .crepe-root {
+  min-height: auto;
+  padding: 48px 64px;
 }
 
 .welcome {

@@ -6,7 +6,7 @@ import type { DesktopApi } from "./services/desktop";
 vi.mock("./components/VisualMarkdownEditor", () => ({
   VisualMarkdownEditor: ({ title, value, onChange }: { title: string; value: string; onChange(value: string): void }) => (
     <section>
-      <h1>{title}</h1>
+      {title === "未命名" || title === "Untitled" ? null : <h1>{title}</h1>}
       <span>{value}</span>
       <button type="button" onClick={() => onChange("# Changed")}>修改文档</button>
     </section>
@@ -33,6 +33,9 @@ const api: DesktopApi = {
   }),
   openExternalMarkdownFile: async (path) => ({ root: "/dropped", relativePath: "drop.md", name: "drop.md", content: path }),
   pendingExternalDocuments: async () => [],
+  saveExportTextFile: async (defaultName) => defaultName,
+  saveExportBinaryFile: async (defaultName) => defaultName,
+  setMenuLocale: async () => ({ success: true }),
 };
 
 describe("LumenMark app shell", () => {
@@ -46,7 +49,7 @@ describe("LumenMark app shell", () => {
 
   it("starts in an untitled Chinese visual editing document and persists an English locale choice", async () => {
     const { unmount } = render(<App api={api} />);
-    await waitFor(() => expect(screen.getByRole("heading", { name: "未命名" })).toBeVisible());
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "未命名" })).not.toBeInTheDocument());
     expect(screen.getAllByRole("button", { name: "打开文件夹" })[0]).toBeVisible();
     expect(screen.queryByRole("button", { name: "预览" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "English" }));

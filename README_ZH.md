@@ -10,11 +10,11 @@ LumenMark 是一款面向 Windows 10/11 x64 与 macOS Apple Silicon 的本地 Ma
 - 通过 Milkdown Crepe 直接编辑排版后的 Markdown；可打开文件、打开工作区、拖入 `.md`，或使用系统“打开方式”。
 - 从系统剪贴板粘贴 Markdown 源文本时，标题、列表、引用、表格、代码围栏、数学公式和 Mermaid 块会解析成对应的排版内容。
 - 直接编辑 GFM 表格与任务列表、KaTeX 数学公式、Mermaid 流程图，以及具有高对比高亮的 JSON、Java、JavaScript、TypeScript、Go、Python、HTML、CSS、Rust、C/C++、PHP、XML、Shell、SQL、YAML、Markdown、Mermaid、Text 代码块。
-- 输入三个反引号后继续输入字母可检索代码块语言，例如输入 ```` ```j ```` 会显示 `json`、`java` 与 `javascript`，回车或点击即可创建对应代码块。
-- 使用 macOS 与 Windows 原生“格式 Format”菜单手动应用段落、H1-H6、引用、列表、代码块、链接和行内文本格式。
+- 输入三个反引号后继续输入字母可检索代码块语言，例如输入 ```` ```j ```` 会显示 `json`、`java` 与 `javascript`，可用上下键、回车或鼠标创建对应代码块。
+- 使用 macOS 与 Windows 原生格式菜单手动应用段落、H1-H6、引用、列表、代码块、链接和行内文本格式；菜单会跟随当前界面语言显示。
 - 使用实时大纲定位标题，在文档内执行查找和替换，并在左侧工作区顶部搜索文件名与 Markdown 正文。
 - 重启或异常退出后可恢复本地草稿；草稿恢复不会在用户保存前覆盖原始文件。
-- 代码块可复制，但软件不会执行代码，也不会把代码块导出到磁盘。
+- 代码块可复制、可独立切换自动换行，并可将当前文档渲染结果导出为 HTML、PDF 或 PNG；软件不会执行代码块。
 - 默认不执行 Markdown 原始 HTML，并限制本地图片与文档读写只能位于选定的安全目录内。
 - 默认使用简体中文，可在工具栏切换英文界面。
 
@@ -41,16 +41,15 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## 安装包与首次运行
 
-推送 `v0.3.5` 版本标签后，GitHub Release 会生成：
+推送 `v0.3.6` 版本标签后，GitHub Release 会生成：
 
 - Windows x64 的 `LumenMark_<version>_x64-setup.exe`（NSIS 用户级安装，包含 WebView2 离线安装器）。
 - macOS Apple Silicon 的 `LumenMark_<version>_aarch64.dmg`。
 
-`v0.3.5` 优化写作空间、代码块体验和工作区搜索。代码块右上角新增独立自动换行开关，补齐更多主流语言高亮与代码围栏联想；左侧工作区支持折叠为图标栏和拖拽调整宽度；工作区顶部新增即时搜索框，可搜索文件名与 Markdown 正文。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 使用系统 WebKit，因此 `.dmg` 体积明显小于 Windows 安装包是正常结果；安装和启动不需要下载额外运行时。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+`v0.3.6` 新增 HTML、PDF、PNG 直接导出，并集中修复编辑体验问题：菜单栏跟随语言切换，不再中英文双语混排；新建文档不再显示额外“未命名”标题；深色模式覆盖更完整；工作区隐藏不包含 Markdown 的文件夹；左侧长文件名支持横向滚动；代码块复制和自动换行按钮不再重叠；代码围栏联想支持上下键选择；代码块回车保留合理缩进；Shell 注释高亮更完整。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 使用系统 WebKit，因此 `.dmg` 体积明显小于 Windows 安装包是正常结果；安装和启动不需要下载额外运行时。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
 
 ## 后续路线
 
-- `v0.3.6`：PDF、HTML 与图片导出。
 - `v0.3.7`：主题、字体、阅读宽度与代码主题设置。
 - `v0.3.8`：大纲固定、标题折叠和更强的大纲/编辑器同步。
 - `v0.3.9`：Mermaid 与数学公式模板，以及更友好的错误提示。

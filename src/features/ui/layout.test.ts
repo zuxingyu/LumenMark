@@ -16,11 +16,11 @@ describe("application layout", () => {
 
     expect(sidebar).toContain("min-height: 0");
     expect(sidebar).toContain("overflow-y: auto");
-    expect(sidebar).toContain("overflow-x: hidden");
+    expect(sidebar).toContain("overflow-x: auto");
   });
 
   it("uses a wider writing surface with responsive padding", () => {
-    expect(cssRule(".visual-editor")).toContain("max-width: 1240px");
+    expect(cssRule(".visual-editor")).toContain("max-width: 1360px");
     expect(styles).toContain("@media (max-width: 860px)");
     expect(styles).toContain(".visual-editor");
   });
@@ -38,8 +38,21 @@ describe("application layout", () => {
   });
 
   it("adds a per-code-block wrap toggle with a horizontal-scroll off state", () => {
-    expect(cssRule(".code-wrap-toggle")).toContain("position: absolute");
+    expect(cssRule(".code-block-tools")).toContain("display: inline-flex");
     expect(cssRule(".crepe-root .milkdown-code-block.code-wrap-off .cm-scroller")).toContain("overflow-x: auto");
     expect(cssRule(".crepe-root .milkdown-code-block.code-wrap-off .cm-line")).toContain("white-space: pre");
+  });
+
+  it("hides Crepe block add and drag handles for a pure writing surface", () => {
+    expect(styles).toContain(".crepe-root .milkdown-block-handle");
+    expect(styles).toContain(".crepe-root .milkdown-slash-menu");
+    expect(styles).toContain(".crepe-root [data-block-handle]");
+    expect(styles).toContain("display: none !important");
+  });
+
+  it("keeps the visual editor and Milkdown frame dark-mode aware", () => {
+    expect(cssRule(".document-surface")).toContain("background: var(--page)");
+    expect(styles).toContain(".crepe-root .milkdown");
+    expect(styles).toContain("background: var(--page)");
   });
 });

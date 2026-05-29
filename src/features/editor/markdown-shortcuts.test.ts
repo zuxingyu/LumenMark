@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   getCodeFenceQuery,
   getCodeLanguageSuggestions,
+  getNextCodeLanguageSelection,
   normalizeCodeLanguage,
   parseEnterShortcut,
   shouldKeepLiteralSpace,
 } from "./markdown-shortcuts";
+import { getNextCodeLineIndent } from "./code-block-enhancements";
 
 describe("Markdown visual shortcut timing", () => {
   it("keeps block syntax literal when the user presses Space", () => {
@@ -80,5 +82,20 @@ describe("Markdown visual shortcut timing", () => {
     expect(getCodeLanguageSuggestions("c").map((language) => language.id)).toEqual(["css", "cpp"]);
     expect(getCodeLanguageSuggestions("x").map((language) => language.id)).toEqual(["xml"]);
     expect(getCodeLanguageSuggestions("zz")).toEqual([]);
+  });
+
+  it("moves code fence language selection with arrow keys", () => {
+    const suggestions = getCodeLanguageSuggestions("j");
+
+    expect(getNextCodeLanguageSelection(0, suggestions.length, "ArrowDown")).toBe(1);
+    expect(getNextCodeLanguageSelection(1, suggestions.length, "ArrowDown")).toBe(2);
+    expect(getNextCodeLanguageSelection(2, suggestions.length, "ArrowDown")).toBe(0);
+    expect(getNextCodeLanguageSelection(0, suggestions.length, "ArrowUp")).toBe(2);
+  });
+
+  it("keeps code block enter indentation near structured code", () => {
+    expect(getNextCodeLineIndent("  const value = 1")).toBe("  ");
+    expect(getNextCodeLineIndent("  if (ready) {")).toBe("    ");
+    expect(getNextCodeLineIndent("\titems: [")).toBe("\t  ");
   });
 });

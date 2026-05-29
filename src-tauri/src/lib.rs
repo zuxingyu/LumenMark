@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{
@@ -65,24 +65,56 @@ struct ExternalDocumentState {
     frontend_ready: AtomicBool,
 }
 
-const FORMAT_MENU_ITEMS: &[(&str, &str, &str, Option<&str>)] = &[
-    ("format-paragraph", "paragraph", "段落 Paragraph", Some("CmdOrCtrl+0")),
-    ("format-heading-1", "heading-1", "标题 1 Heading 1", Some("CmdOrCtrl+1")),
-    ("format-heading-2", "heading-2", "标题 2 Heading 2", Some("CmdOrCtrl+2")),
-    ("format-heading-3", "heading-3", "标题 3 Heading 3", Some("CmdOrCtrl+3")),
-    ("format-heading-4", "heading-4", "标题 4 Heading 4", Some("CmdOrCtrl+4")),
-    ("format-heading-5", "heading-5", "标题 5 Heading 5", Some("CmdOrCtrl+5")),
-    ("format-heading-6", "heading-6", "标题 6 Heading 6", Some("CmdOrCtrl+6")),
-    ("format-blockquote", "blockquote", "引用 Quote", Some("CmdOrCtrl+Shift+Q")),
-    ("format-bullet-list", "bullet-list", "无序列表 Bullet List", Some("CmdOrCtrl+Shift+8")),
-    ("format-ordered-list", "ordered-list", "有序列表 Ordered List", Some("CmdOrCtrl+Shift+7")),
-    ("format-task-list", "task-list", "任务列表 Task List", None),
-    ("format-code-block", "code-block", "代码块 Code Block", Some("CmdOrCtrl+Shift+K")),
-    ("format-strong", "strong", "加粗 Bold", Some("CmdOrCtrl+B")),
-    ("format-emphasis", "emphasis", "斜体 Italic", Some("CmdOrCtrl+I")),
-    ("format-strikethrough", "strikethrough", "删除线 Strikethrough", Some("CmdOrCtrl+Shift+X")),
-    ("format-inline-code", "inline-code", "行内代码 Inline Code", Some("CmdOrCtrl+Shift+C")),
-    ("format-link", "link", "链接 Link", Some("CmdOrCtrl+K")),
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum MenuLocale {
+    Zh,
+    En,
+}
+
+impl MenuLocale {
+    fn from_code(value: &str) -> Self {
+        if value.eq_ignore_ascii_case("en") {
+            Self::En
+        } else {
+            Self::Zh
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct MenuText {
+    zh: &'static str,
+    en: &'static str,
+}
+
+impl MenuText {
+    fn get(self, locale: MenuLocale) -> &'static str {
+        match locale {
+            MenuLocale::Zh => self.zh,
+            MenuLocale::En => self.en,
+        }
+    }
+}
+
+const FORMAT_MENU_ITEMS: &[(&str, &str, MenuText, Option<&str>)] = &[
+    ("format-paragraph", "paragraph", MenuText { zh: "段落", en: "Paragraph" }, Some("CmdOrCtrl+0")),
+    ("format-heading-1", "heading-1", MenuText { zh: "标题 1", en: "Heading 1" }, Some("CmdOrCtrl+1")),
+    ("format-heading-2", "heading-2", MenuText { zh: "标题 2", en: "Heading 2" }, Some("CmdOrCtrl+2")),
+    ("format-heading-3", "heading-3", MenuText { zh: "标题 3", en: "Heading 3" }, Some("CmdOrCtrl+3")),
+    ("format-heading-4", "heading-4", MenuText { zh: "标题 4", en: "Heading 4" }, Some("CmdOrCtrl+4")),
+    ("format-heading-5", "heading-5", MenuText { zh: "标题 5", en: "Heading 5" }, Some("CmdOrCtrl+5")),
+    ("format-heading-6", "heading-6", MenuText { zh: "标题 6", en: "Heading 6" }, Some("CmdOrCtrl+6")),
+    ("format-blockquote", "blockquote", MenuText { zh: "引用", en: "Quote" }, Some("CmdOrCtrl+Shift+Q")),
+    ("format-bullet-list", "bullet-list", MenuText { zh: "无序列表", en: "Bullet List" }, Some("CmdOrCtrl+Shift+8")),
+    ("format-ordered-list", "ordered-list", MenuText { zh: "有序列表", en: "Ordered List" }, Some("CmdOrCtrl+Shift+7")),
+    ("format-task-list", "task-list", MenuText { zh: "任务列表", en: "Task List" }, None),
+    ("format-code-block", "code-block", MenuText { zh: "代码块", en: "Code Block" }, Some("CmdOrCtrl+Shift+K")),
+    ("format-strong", "strong", MenuText { zh: "加粗", en: "Bold" }, Some("CmdOrCtrl+B")),
+    ("format-emphasis", "emphasis", MenuText { zh: "斜体", en: "Italic" }, Some("CmdOrCtrl+I")),
+    ("format-strikethrough", "strikethrough", MenuText { zh: "删除线", en: "Strikethrough" }, Some("CmdOrCtrl+Shift+X")),
+    ("format-inline-code", "inline-code", MenuText { zh: "行内代码", en: "Inline Code" }, Some("CmdOrCtrl+Shift+C")),
+    ("format-link", "link", MenuText { zh: "链接", en: "Link" }, Some("CmdOrCtrl+K")),
 ];
 
 fn format_command_from_menu_id(id: &str) -> Option<&'static str> {
@@ -92,10 +124,27 @@ fn format_command_from_menu_id(id: &str) -> Option<&'static str> {
         .map(|(_, command, _, _)| *command)
 }
 
-fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<Menu<R>> {
+fn localized_menu_label(locale: MenuLocale, key: &str) -> &'static str {
+    match (locale, key) {
+        (MenuLocale::Zh, "file") => "文件",
+        (MenuLocale::En, "file") => "File",
+        (MenuLocale::Zh, "edit") => "编辑",
+        (MenuLocale::En, "edit") => "Edit",
+        (MenuLocale::Zh, "format") => "格式",
+        (MenuLocale::En, "format") => "Format",
+        (MenuLocale::Zh, "view") => "显示",
+        (MenuLocale::En, "view") => "View",
+        _ => "",
+    }
+}
+
+fn build_app_menu_for_locale<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    locale: MenuLocale,
+) -> tauri::Result<Menu<R>> {
     let format_items = FORMAT_MENU_ITEMS
         .iter()
-        .map(|(id, _, label, accelerator)| MenuItem::with_id(app, *id, *label, true, *accelerator))
+        .map(|(id, _, label, accelerator)| MenuItem::with_id(app, *id, label.get(locale), true, *accelerator))
         .collect::<tauri::Result<Vec<_>>>()?;
 
     Menu::with_items(
@@ -119,7 +168,7 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
             )?,
             &Submenu::with_items(
                 app,
-                "文件 File",
+                localized_menu_label(locale, "file"),
                 true,
                 &[
                     &PredefinedMenuItem::close_window(app, None)?,
@@ -129,7 +178,7 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
             )?,
             &Submenu::with_items(
                 app,
-                "编辑 Edit",
+                localized_menu_label(locale, "edit"),
                 true,
                 &[
                     &PredefinedMenuItem::undo(app, None)?,
@@ -143,7 +192,7 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
             )?,
             &Submenu::with_items(
                 app,
-                "格式 Format",
+                localized_menu_label(locale, "format"),
                 true,
                 &[
                     &format_items[0],
@@ -171,12 +220,16 @@ fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result
             #[cfg(target_os = "macos")]
             &Submenu::with_items(
                 app,
-                "显示 View",
+                localized_menu_label(locale, "view"),
                 true,
                 &[&PredefinedMenuItem::fullscreen(app, None)?],
             )?,
         ],
     )
+}
+
+fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<Menu<R>> {
+    build_app_menu_for_locale(app, MenuLocale::Zh)
 }
 
 fn has_only_normal_components(path: &Path) -> bool {
@@ -236,6 +289,25 @@ fn is_hidden_path(path: &Path) -> bool {
     path.components().any(|part| {
         matches!(part, Component::Normal(name) if name.to_string_lossy().starts_with('.'))
     })
+}
+
+fn folder_contains_markdown(root: &Path, directory: &Path) -> CommandResult<bool> {
+    for entry in fs::read_dir(directory).map_err(|error| format!("Unable to inspect folder: {error}"))? {
+        let path = entry
+            .map_err(|error| format!("Unable to inspect entry: {error}"))?
+            .path();
+        if path != root && is_hidden_path(path.strip_prefix(root).unwrap_or(&path)) {
+            continue;
+        }
+        if path.is_dir() {
+            if folder_contains_markdown(root, &path)? {
+                return Ok(true);
+            }
+        } else if require_markdown(&path).is_ok() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 pub fn read_asset_data_url(
@@ -387,6 +459,42 @@ pub fn write_new_document_at_path(path: &Path, content: &str) -> CommandResult<O
 }
 
 #[tauri::command]
+fn save_export_text_file(default_name: String, content: String) -> CommandResult<Option<String>> {
+    rfd::FileDialog::new()
+        .set_file_name(default_name)
+        .save_file()
+        .map(|path| {
+            fs::write(&path, content).map_err(|error| format!("Unable to export document: {error}"))?;
+            Ok(path.to_string_lossy().to_string())
+        })
+        .transpose()
+}
+
+#[tauri::command]
+fn save_export_binary_file(default_name: String, content_base64: String) -> CommandResult<Option<String>> {
+    rfd::FileDialog::new()
+        .set_file_name(default_name)
+        .save_file()
+        .map(|path| {
+            let bytes = STANDARD
+                .decode(content_base64.as_bytes())
+                .map_err(|error| format!("Unable to decode exported document: {error}"))?;
+            fs::write(&path, bytes).map_err(|error| format!("Unable to export document: {error}"))?;
+            Ok(path.to_string_lossy().to_string())
+        })
+        .transpose()
+}
+
+#[tauri::command]
+fn set_menu_locale(app: tauri::AppHandle, locale: String) -> CommandResult<OperationResult> {
+    let menu = build_app_menu_for_locale(&app, MenuLocale::from_code(&locale))
+        .map_err(|error| format!("Unable to build application menu: {error}"))?;
+    app.set_menu(menu)
+        .map_err(|error| format!("Unable to update application menu: {error}"))?;
+    Ok(OperationResult { success: true })
+}
+
+#[tauri::command]
 fn save_new_markdown_file(content: String) -> CommandResult<Option<OpenedDocument>> {
     rfd::FileDialog::new()
         .add_filter("Markdown", &["md"])
@@ -416,7 +524,13 @@ fn list_workspace_entries(
         .map_err(|error| format!("Unable to list folder: {error}"))?
         .filter_map(Result::ok)
         .map(|entry| entry.path())
-        .filter(|path| path.is_dir() || require_markdown(path).is_ok())
+        .filter(|path| {
+            if path.is_dir() {
+                folder_contains_markdown(&root_path, path).unwrap_or(false)
+            } else {
+                require_markdown(path).is_ok()
+            }
+        })
         .map(|path| entry_from_path(&root_path, &path))
         .collect::<CommandResult<Vec<_>>>()?;
     entries.sort_by_key(|entry| (entry.kind != "directory", entry.name.to_lowercase()));
@@ -625,7 +739,10 @@ pub fn run() {
             write_markdown_file,
             create_markdown_file,
             rename_markdown_entry,
-            search_workspace
+            search_workspace,
+            save_export_text_file,
+            save_export_binary_file,
+            set_menu_locale
         ])
         .build(tauri::generate_context!())
         .expect("error while building LumenMark")
@@ -824,6 +941,26 @@ mod tests {
     }
 
     #[test]
+    fn lists_only_folders_that_contain_markdown_files() {
+        let root = tempdir().expect("temp tree");
+        fs::create_dir(root.path().join("docs")).expect("docs");
+        fs::create_dir(root.path().join("assets")).expect("assets");
+        fs::create_dir(root.path().join("nested")).expect("nested");
+        fs::create_dir(root.path().join("nested/child")).expect("child");
+        fs::write(root.path().join("docs/guide.md"), "# Guide").expect("guide");
+        fs::write(root.path().join("assets/logo.png"), "png").expect("asset");
+        fs::write(root.path().join("nested/child/deep.md"), "# Deep").expect("deep");
+
+        let entries = super::list_workspace_entries(root.path().to_string_lossy().to_string(), None)
+            .expect("entries");
+        let names = entries.iter().map(|entry| entry.name.as_str()).collect::<Vec<_>>();
+
+        assert!(names.contains(&"docs"));
+        assert!(names.contains(&"nested"));
+        assert!(!names.contains(&"assets"));
+    }
+
+    #[test]
     fn desktop_menu_declares_typora_style_format_commands() {
         assert_eq!(super::format_command_from_menu_id("format-paragraph"), Some("paragraph"));
         assert_eq!(super::format_command_from_menu_id("format-heading-1"), Some("heading-1"));
@@ -834,5 +971,11 @@ mod tests {
         assert!(source.contains(".menu("));
         assert!(source.contains(".on_menu_event("));
         assert!(source.contains("format-command"));
+        assert!(super::FORMAT_MENU_ITEMS.iter().all(|(_, _, label, _)| {
+            !label.get(super::MenuLocale::Zh).contains("Paragraph")
+                && !label.get(super::MenuLocale::En).contains('段')
+        }));
+        assert_eq!(super::localized_menu_label(super::MenuLocale::Zh, "file"), "文件");
+        assert_eq!(super::localized_menu_label(super::MenuLocale::En, "file"), "File");
     }
 }

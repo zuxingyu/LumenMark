@@ -10,6 +10,9 @@ export const messages = {
     newDocument: "新建",
     save: "保存",
     find: "查找",
+    exportHtml: "导出 HTML",
+    exportPdf: "导出 PDF",
+    exportPng: "导出 PNG",
     findText: "查找内容",
     replaceWith: "替换为",
     replace: "替换",
@@ -60,6 +63,7 @@ export const messages = {
     fileNameMatches: "文件名匹配",
     contentMatches: "正文匹配",
     wrapCode: "自动换行",
+    exportComplete: "已导出 {name}",
   },
   "en-US": {
     openFile: "Open File",
@@ -67,6 +71,9 @@ export const messages = {
     newDocument: "New",
     save: "Save",
     find: "Find",
+    exportHtml: "Export HTML",
+    exportPdf: "Export PDF",
+    exportPng: "Export PNG",
     findText: "Find text",
     replaceWith: "Replace with",
     replace: "Replace",
@@ -117,6 +124,7 @@ export const messages = {
     fileNameMatches: "File name matches",
     contentMatches: "Content matches",
     wrapCode: "Wrap code",
+    exportComplete: "Exported {name}",
   },
 } as const;
 

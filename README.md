@@ -10,11 +10,11 @@ LumenMark is a local Markdown reader and editor for Windows 10/11 x64 and macOS 
 - Edit formatted Markdown directly through the Milkdown Crepe visual editor; open a file, a folder workspace, drag a `.md` into the window, or use the operating system's Open With action.
 - Paste Markdown source from the system clipboard and have headings, lists, quotes, tables, code fences, math, and Mermaid blocks parsed into formatted content.
 - Edit GFM tables and tasks, KaTeX math, Mermaid diagrams, and high-contrast highlighted JSON, Java, JavaScript, TypeScript, Go, Python, HTML, CSS, Rust, C/C++, PHP, XML, Shell, SQL, YAML, Markdown, Mermaid, and Text blocks.
-- Type three backticks followed by letters to search code block languages. For example, ```` ```j ```` offers `json`, `java`, and `javascript`; press Enter or click a result to create the block.
-- Use the native Format menu on macOS and Windows to apply paragraph, H1-H6, quote, list, code block, link, and inline text formatting commands.
+- Type three backticks followed by letters to search code block languages. For example, ```` ```j ```` offers `json`, `java`, and `javascript`; use Arrow Up/Down, Enter, or the mouse to create the block.
+- Use the native Format menu on macOS and Windows to apply paragraph, H1-H6, quote, list, code block, link, and inline text formatting commands. The menu follows the active app language.
 - Navigate headings with the live outline, use find and replace inside the document, and search file names plus Markdown content from the active workspace sidebar.
 - Recover a local draft after a restart or crash. Draft recovery never writes to the original file until you save.
-- Copy code blocks; LumenMark never executes or exports code blocks.
+- Copy code blocks, toggle wrapping per block, and export the current rendered document to HTML, PDF, or PNG. LumenMark never executes code blocks.
 - Keep raw HTML inactive and restrict local images and document I/O to the selected safety root.
 - Start in Simplified Chinese with an in-app English switch.
 
@@ -41,16 +41,15 @@ The sample workspace at `examples/workspace/architecture.md` exercises formulas,
 
 ## Releases
 
-Pushing the `v0.3.5` version tag creates a GitHub Release with:
+Pushing the `v0.3.6` version tag creates a GitHub Release with:
 
 - `LumenMark_<version>_x64-setup.exe` for Windows x64 (NSIS, per-user installation, bundled WebView2 offline installer).
 - `LumenMark_<version>_aarch64.dmg` for macOS Apple Silicon.
 
-Version `v0.3.5` improves the writing workspace, code block behavior, and workspace search. Code blocks now include a per-block wrap toggle, additional mainstream language highlighting, and expanded code fence suggestions. The workspace sidebar can collapse into an icon rail, resize by drag, and search file names plus Markdown content directly from the top of the sidebar. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. macOS uses the system WebKit runtime, so the `.dmg` being much smaller than the Windows installer is expected; installation and launch do not download an additional runtime. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
+Version `v0.3.6` adds direct HTML, PDF, and PNG export, cleans up the writing surface, and fixes several editor regressions. The native menu now follows the selected language, untitled documents no longer show an extra title header, dark mode styling is more complete, workspace folders without Markdown content are hidden, long sidebar names can scroll horizontally, code block controls no longer overlap, code fence suggestions support keyboard selection, code block Enter preserves useful indentation, and Shell comments are highlighted more consistently. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. macOS uses the system WebKit runtime, so the `.dmg` being much smaller than the Windows installer is expected; installation and launch do not download an additional runtime. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
 
 ## Roadmap
 
-- `v0.3.6`: PDF, HTML, and image export.
 - `v0.3.7`: Theme, font, reading width, and code theme settings.
 - `v0.3.8`: Sticky outline, heading folding, and stronger outline/editor synchronization.
 - `v0.3.9`: Mermaid and math templates with friendlier errors.

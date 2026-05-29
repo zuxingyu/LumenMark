@@ -18,6 +18,7 @@ export interface CodeLanguageOption {
 export interface CodeFenceSearchState {
   query: string;
   suggestions: CodeLanguageOption[];
+  selectedIndex: number;
   top: number;
   left: number;
 }
@@ -97,6 +98,11 @@ export function getCodeLanguageSuggestions(query: string): CodeLanguageOption[] 
     const searchable = [language.id, language.label.toLowerCase(), ...language.aliases];
     return searchable.some((value) => value.startsWith(normalized));
   });
+}
+
+export function getNextCodeLanguageSelection(current: number, total: number, key: "ArrowDown" | "ArrowUp"): number {
+  if (total <= 0) return 0;
+  return key === "ArrowDown" ? (current + 1) % total : (current - 1 + total) % total;
 }
 
 export function shouldKeepLiteralSpace(lineBeforeCursor: string): boolean {
@@ -213,49 +219,90 @@ const enterConfirmedShortcut = $shortcut(() => ({
 
 function createCodeFenceSearchPlugin(onSearchChange: (state: CodeFenceSearchState | null) => void) {
   return $prose(
-    () =>
-      new Plugin({
+    () => {
+      let searchState: CodeFenceSearchState | null = null;
+      let selectedIndex = 0;
+      let lastQuery = "";
+      const clearSearch = () => {
+        searchState = null;
+        selectedIndex = 0;
+        lastQuery = "";
+        onSearchChange(null);
+      };
+      return new Plugin({
         key: new PluginKey("lumenmark-code-fence-search"),
+        props: {
+          handleKeyDown(view, event) {
+            if (!searchState) return false;
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault();
+              selectedIndex = getNextCodeLanguageSelection(selectedIndex, searchState.suggestions.length, event.key);
+              searchState = { ...searchState, selectedIndex };
+              onSearchChange(searchState);
+              return true;
+            }
+            if (event.key === "Enter") {
+              event.preventDefault();
+              const language = searchState.suggestions[selectedIndex]?.id;
+              if (language) createCodeBlockCommand(language)(view.state, view.dispatch);
+              clearSearch();
+              return true;
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              clearSearch();
+              return true;
+            }
+            return false;
+          },
+        },
         view(view) {
           const updateSearch = () => {
             const { selection } = view.state;
             if (!selection.empty) {
-              onSearchChange(null);
+              clearSearch();
               return;
             }
             const { $from } = selection;
             if ($from.parent.type.name !== "paragraph" || $from.parentOffset !== $from.parent.content.size) {
-              onSearchChange(null);
+              clearSearch();
               return;
             }
 
             const query = getCodeFenceQuery($from.parent.textContent);
             if (query === null || query.length === 0) {
-              onSearchChange(null);
+              clearSearch();
               return;
             }
 
             const suggestions = getCodeLanguageSuggestions(query);
             if (suggestions.length === 0) {
-              onSearchChange(null);
+              clearSearch();
               return;
             }
+            if (query !== lastQuery) {
+              selectedIndex = 0;
+              lastQuery = query;
+            }
+            selectedIndex = Math.min(selectedIndex, suggestions.length - 1);
 
             const editorRect = view.dom.closest(".visual-editor")?.getBoundingClientRect() ?? view.dom.getBoundingClientRect();
             const cursorRect = view.coordsAtPos(selection.from);
-            onSearchChange({
+            searchState = {
               query,
               suggestions,
+              selectedIndex,
               top: cursorRect.bottom - editorRect.top + 8,
               left: cursorRect.left - editorRect.left,
-            });
+            };
+            onSearchChange(searchState);
           };
 
           const selectLanguage = (event: Event) => {
             const language = (event as CustomEvent<string>).detail;
             if (!language) return;
             createCodeBlockCommand(language)(view.state, view.dispatch);
-            onSearchChange(null);
+            clearSearch();
             view.focus();
           };
 
@@ -269,7 +316,8 @@ function createCodeFenceSearchPlugin(onSearchChange: (state: CodeFenceSearchStat
             },
           };
         },
-      }),
+      });
+    },
   );
 }
 

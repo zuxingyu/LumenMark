@@ -14,6 +14,9 @@ export interface DesktopApi {
   createMarkdownFile(root: string, relativePath: string): Promise<WorkspaceEntry>;
   renameMarkdownEntry(root: string, from: string, to: string): Promise<WorkspaceEntry>;
   searchWorkspace(root: string, query: string): Promise<WorkspaceSearchResult[]>;
+  saveExportTextFile(defaultName: string, content: string): Promise<string | null>;
+  saveExportBinaryFile(defaultName: string, contentBase64: string): Promise<string | null>;
+  setMenuLocale(locale: "zh" | "en"): Promise<{ success: boolean }>;
 }
 
 export const tauriApi: DesktopApi = {
@@ -30,6 +33,9 @@ export const tauriApi: DesktopApi = {
   createMarkdownFile: (root, relativePath) => invoke("create_markdown_file", { root, relativePath }),
   renameMarkdownEntry: (root, from, to) => invoke("rename_markdown_entry", { root, from, to }),
   searchWorkspace: (root, query) => invoke("search_workspace", { root, query }),
+  saveExportTextFile: (defaultName, content) => invoke("save_export_text_file", { defaultName, content }),
+  saveExportBinaryFile: (defaultName, contentBase64) => invoke("save_export_binary_file", { defaultName, contentBase64 }),
+  setMenuLocale: (locale) => invoke("set_menu_locale", { locale }),
 };
 
 const sampleMarkdown = `# Service Deployment Notes
@@ -122,5 +128,8 @@ export function createDemoApi(): DesktopApi {
         line: 1,
         excerpt: source.split("\n").find((line) => line.toLowerCase().includes(query.toLowerCase())) ?? source,
       })),
+    saveExportTextFile: async (defaultName) => defaultName,
+    saveExportBinaryFile: async (defaultName) => defaultName,
+    setMenuLocale: async () => ({ success: true }),
   };
 }

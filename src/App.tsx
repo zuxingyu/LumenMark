@@ -8,6 +8,15 @@ import { UnsavedDialog } from "./components/UnsavedDialog";
 import { clearDraft, loadDraft, saveDraft, sessionFromDraft, shouldPersistDraft, type RecoveryDraft } from "./features/document/draft";
 import { createOpenedSession, createUntitledSession, editSession, markSaved } from "./features/document/session";
 import { buildOutline } from "./features/editor/document-tools";
+import {
+  buildStandaloneHtml,
+  cloneDocumentBody,
+  collectExportStyles,
+  exportFileName,
+  renderElementToPdfBase64,
+  renderElementToPngBase64,
+  type ExportFormat,
+} from "./features/export/document-export";
 import { initialLocale, LOCALE_KEY, messages, RECENT_WORKSPACES_KEY, type Locale } from "./i18n";
 import { createDemoApi, firstMarkdownPath, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
 import type { DocumentSession, OpenedDocument, RecentWorkspace, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "./types";
@@ -94,6 +103,10 @@ export function App({ api: providedApi }: AppProps) {
   }, [sidebarCollapsed]);
 
   useEffect(() => {
+    void api.setMenuLocale(locale === "zh-CN" ? "zh" : "en").catch(() => undefined);
+  }, [api, locale]);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       if (shouldPersistDraft(session)) saveDraft(session);
     }, 450);
@@ -105,6 +118,37 @@ export function App({ api: providedApi }: AppProps) {
     localStorage.setItem(LOCALE_KEY, next);
     setLocale(next);
     setStatus(messages[next].ready);
+  }
+
+  async function exportDocument(format: ExportFormat) {
+    const root = document.querySelector<HTMLElement>(".crepe-root");
+    if (!root) return;
+    const defaultName = exportFileName(session.title || "document", format);
+    const clone = cloneDocumentBody(root);
+    if (format === "html") {
+      const html = buildStandaloneHtml({
+        title: session.title || defaultName,
+        body: clone.innerHTML,
+        styles: collectExportStyles(),
+      });
+      const saved = await api.saveExportTextFile(defaultName, html);
+      if (saved) setStatus(labels.exportComplete.replace("{name}", saved.split(/[\\/]/).at(-1) ?? saved));
+      return;
+    }
+
+    const host = document.createElement("div");
+    host.className = "export-capture-host";
+    host.append(clone);
+    document.body.append(host);
+    try {
+      const contentBase64 = format === "png"
+        ? await renderElementToPngBase64(clone)
+        : await renderElementToPdfBase64(clone);
+      const saved = await api.saveExportBinaryFile(defaultName, contentBase64);
+      if (saved) setStatus(labels.exportComplete.replace("{name}", saved.split(/[\\/]/).at(-1) ?? saved));
+    } finally {
+      host.remove();
+    }
   }
 
   const attempt = useCallback(async (action: () => Promise<void>) => {
@@ -429,6 +473,9 @@ export function App({ api: providedApi }: AppProps) {
         onOpenFolder={openWorkspace}
         onNew={createDocument}
         onSave={() => void saveDocument()}
+        onExportHtml={() => void attempt(() => exportDocument("html"))}
+        onExportPdf={() => void attempt(() => exportDocument("pdf"))}
+        onExportPng={() => void attempt(() => exportDocument("png"))}
         onFind={() => setFindVisible(true)}
         onToggleLocale={changeLocale}
       />

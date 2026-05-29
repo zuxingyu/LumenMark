@@ -43,7 +43,7 @@ export const lumenCodeTheme = [
       { tag: [tags.typeName, tags.className], color: "var(--code-type)" },
       { tag: [tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace], color: "var(--code-number)" },
       { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link], color: "var(--code-operator)" },
-      { tag: [tags.meta, tags.comment], color: "var(--code-comment)", fontStyle: "italic" },
+      { tag: [tags.meta, tags.comment, tags.lineComment, tags.blockComment], color: "var(--code-comment)", fontStyle: "italic" },
       { tag: tags.strong, fontWeight: "700" },
       { tag: tags.emphasis, fontStyle: "italic" },
       { tag: tags.strikethrough, textDecoration: "line-through" },

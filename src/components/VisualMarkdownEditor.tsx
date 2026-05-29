@@ -15,7 +15,6 @@ import { yaml } from "@codemirror/lang-yaml";
 import { LanguageDescription, LanguageSupport, StreamLanguage } from "@codemirror/language";
 import { shell } from "@codemirror/legacy-modes/mode/shell";
 import { CrepeBuilder } from "@milkdown/crepe/builder";
-import { blockEdit } from "@milkdown/crepe/feature/block-edit";
 import { codeMirror } from "@milkdown/crepe/feature/code-mirror";
 import { cursor } from "@milkdown/crepe/feature/cursor";
 import { imageBlock } from "@milkdown/crepe/feature/image-block";
@@ -29,7 +28,7 @@ import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
 import { useEffect, useRef, useState } from "react";
 import type { Messages } from "../i18n";
-import { enhanceCodeBlockWrapping } from "../features/editor/code-block-enhancements";
+import { enhanceCodeBlockControls } from "../features/editor/code-block-enhancements";
 import { lumenCodeTheme } from "../features/editor/code-theme";
 import { runFormatCommand } from "../features/editor/format-menu";
 import {
@@ -105,16 +104,15 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
       .addFeature(imageBlock, {
           proxyDomURL: (source) => resolveImage?.(source).catch(() => "") ?? "",
       })
-      .addFeature(blockEdit)
       .addFeature(placeholder, {
-          text: labels.untitled,
+          text: "",
           mode: "block",
       })
       .addFeature(toolbar)
       .addFeature(codeMirror, {
           languages: codeLanguages,
           theme: lumenCodeTheme,
-          copyText: labels.copy,
+          copyText: "",
           searchPlaceholder: labels.find,
           renderLanguage: (language) => renderCodeLanguage(language),
           previewLabel: "Mermaid",
@@ -138,7 +136,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
     });
     let cleanupCodeBlocks: (() => void) | undefined;
     void editor.create().then(() => {
-      if (editorRoot.current) cleanupCodeBlocks = enhanceCodeBlockWrapping(editorRoot.current, labels.wrapCode);
+      if (editorRoot.current) cleanupCodeBlocks = enhanceCodeBlockControls(editorRoot.current, { wrapLabel: labels.wrapCode, copyLabel: labels.copy });
       if (!revealText?.trim()) return;
       window.setTimeout(() => {
         const normalized = revealText.trim().replace(/\s+/g, " ");
@@ -181,9 +179,6 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
 
   return (
     <section className="visual-editor" aria-label={title}>
-      <header className="visual-document-header">
-        <h1>{title}</h1>
-      </header>
       <div className="crepe-root" ref={editorRoot} />
       {languageSearch ? (
         <div
@@ -192,11 +187,13 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
           role="listbox"
           aria-label="Code block language"
         >
-          {languageSearch.suggestions.map((language) => (
+          {languageSearch.suggestions.map((language, index) => (
             <button
               key={language.id}
               type="button"
               role="option"
+              aria-selected={index === languageSearch.selectedIndex}
+              className={index === languageSearch.selectedIndex ? "selected" : undefined}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
                 window.dispatchEvent(new CustomEvent(CODE_LANGUAGE_SELECTED_EVENT, { detail: language.id }));
