@@ -35,9 +35,10 @@ export interface OpenedDocument extends DocumentContent {
 }
 
 export interface WorkspaceSearchResult {
+  kind: "file" | "content";
   relativePath: string;
   name: string;
-  line: number;
+  line: number | null;
   excerpt: string;
 }
 

@@ -116,6 +116,7 @@ export function createDemoApi(): DesktopApi {
     searchWorkspace: async (_root, query) => documents
       .filter(() => source.toLowerCase().includes(query.toLowerCase()))
       .map((document) => ({
+        kind: "content" as const,
         relativePath: document.relativePath,
         name: document.name,
         line: 1,

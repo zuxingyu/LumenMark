@@ -1,8 +1,16 @@
+import { cpp } from "@codemirror/lang-cpp";
+import { css } from "@codemirror/lang-css";
+import { go } from "@codemirror/lang-go";
+import { html } from "@codemirror/lang-html";
 import { java } from "@codemirror/lang-java";
+import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
+import { php } from "@codemirror/lang-php";
 import { python } from "@codemirror/lang-python";
+import { rust } from "@codemirror/lang-rust";
 import { PostgreSQL, sql } from "@codemirror/lang-sql";
+import { xml } from "@codemirror/lang-xml";
 import { yaml } from "@codemirror/lang-yaml";
 import { LanguageDescription, LanguageSupport, StreamLanguage } from "@codemirror/language";
 import { shell } from "@codemirror/legacy-modes/mode/shell";
@@ -21,6 +29,7 @@ import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
 import { useEffect, useRef, useState } from "react";
 import type { Messages } from "../i18n";
+import { enhanceCodeBlockWrapping } from "../features/editor/code-block-enhancements";
 import { lumenCodeTheme } from "../features/editor/code-theme";
 import { runFormatCommand } from "../features/editor/format-menu";
 import {
@@ -43,7 +52,16 @@ interface VisualMarkdownEditorProps {
 }
 
 const codeLanguages = [
+  LanguageDescription.of({ name: "Go", alias: ["go", "golang"], extensions: ["go"], support: go() }),
   LanguageDescription.of({ name: "Java", alias: ["java"], extensions: ["java"], support: java() }),
+  LanguageDescription.of({ name: "JavaScript", alias: ["javascript", "js"], extensions: ["js", "mjs", "cjs"], support: javascript() }),
+  LanguageDescription.of({ name: "TypeScript", alias: ["typescript", "ts"], extensions: ["ts", "tsx"], support: javascript({ typescript: true }) }),
+  LanguageDescription.of({ name: "HTML", alias: ["html"], extensions: ["html", "htm"], support: html() }),
+  LanguageDescription.of({ name: "CSS", alias: ["css"], extensions: ["css"], support: css() }),
+  LanguageDescription.of({ name: "Rust", alias: ["rust", "rs"], extensions: ["rs"], support: rust() }),
+  LanguageDescription.of({ name: "C++", alias: ["cpp", "c++", "c"], extensions: ["cpp", "cc", "cxx", "c", "h", "hpp"], support: cpp() }),
+  LanguageDescription.of({ name: "PHP", alias: ["php"], extensions: ["php"], support: php() }),
+  LanguageDescription.of({ name: "XML", alias: ["xml"], extensions: ["xml"], support: xml() }),
   LanguageDescription.of({ name: "JSON", alias: ["json"], extensions: ["json"], support: json() }),
   LanguageDescription.of({ name: "SQL", alias: ["sql"], extensions: ["sql"], support: sql({ dialect: PostgreSQL }) }),
   LanguageDescription.of({
@@ -118,7 +136,9 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
     editor.on((listener) => {
       listener.markdownUpdated((_ctx, markdown) => changeHandler.current(markdown));
     });
+    let cleanupCodeBlocks: (() => void) | undefined;
     void editor.create().then(() => {
+      if (editorRoot.current) cleanupCodeBlocks = enhanceCodeBlockWrapping(editorRoot.current, labels.wrapCode);
       if (!revealText?.trim()) return;
       window.setTimeout(() => {
         const normalized = revealText.trim().replace(/\s+/g, " ");
@@ -153,6 +173,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
     return () => {
       window.removeEventListener("lumenmark:outline", focusHeading);
       window.removeEventListener("lumenmark:format-command", runFormatFromWindow);
+      cleanupCodeBlocks?.();
       unlistenFormatMenu?.();
       void editor.destroy();
     };

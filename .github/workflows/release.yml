@@ -45,9 +45,25 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: LumenMark ${{ github.ref_name }}
           releaseBody: |
-            v0.3.4 restores sidebar scrolling, keeps Mermaid diagrams in automatic focus-to-edit and blur-to-preview mode without a manual preview toggle, widens the writing surface, adds local draft recovery, and adds workspace-wide Markdown search. The Windows installer includes the WebView2 offline installer. The macOS DMG uses the system WebKit runtime, so installation and launch do not download an additional runtime. Test build for Windows x64 and macOS Apple Silicon. The Windows installer is unsigned. The macOS app bundle is ad-hoc signed to support Apple Silicon bundle validation, but is not notarized.
+            ## LumenMark v0.3.5 更新内容
 
-            Windows may display a SmartScreen warning. macOS users may need to allow the application through Finder Open or Privacy & Security on first launch.
+            ### 新增与优化
+            - 代码块右上角新增“自动换行”开关，默认开启；关闭后代码按原始横向结构显示，便于查看缩进、表格化内容和长代码行。
+            - 代码块新增 Go、JavaScript、TypeScript、HTML、CSS、Rust、C/C++、PHP、XML 等主流语言高亮和语言联想。
+            - 左侧工作区支持折叠为图标栏，并支持拖拽调整宽度，让正文编辑区获得更高页面占比。
+            - 工作区顶部新增即时搜索框，支持搜索 Markdown 文件名和正文内容。
+            - 搜索结果支持点击打开文件；正文匹配会定位到对应内容附近。
+
+            ### BUG 修复
+            - 修复代码块长行只能强制换行、无法按原始结构查看的问题。
+            - 修复正文区域在大屏下占比仍偏低的问题。
+            - 修复工作区搜索入口不够直接、需要先打开查找面板的问题。
+            - 修复部分主流代码语言无法正确高亮或无法通过代码围栏联想选择的问题。
+
+            ### 发布说明
+            - Windows 安装包仍为未签名测试版本，首次运行可能出现 SmartScreen 提示。
+            - macOS DMG 使用系统 WebKit Runtime，应用包为 ad-hoc 签名，尚未 Apple 公证。
+            - 本项目已公开，发布前已进行敏感信息扫描，未包含密钥、证书、私有配置或本地个人路径。
           releaseDraft: false
           prerelease: true
           args: ${{ matrix.args }}

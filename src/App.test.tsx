@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import type { DesktopApi } from "./services/desktop";
 
@@ -38,6 +38,10 @@ const api: DesktopApi = {
 describe("LumenMark app shell", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("starts in an untitled Chinese visual editing document and persists an English locale choice", async () => {
@@ -175,28 +179,88 @@ describe("LumenMark app shell", () => {
 
   it("searches the active workspace and opens a selected result", async () => {
     const readMarkdownFile = vi.fn().mockResolvedValue({ relativePath: "guide.md", content: "# Search Hit" });
+    const searchWorkspace = vi.fn().mockResolvedValue([{
+      kind: "content",
+      relativePath: "guide.md",
+      name: "guide.md",
+      line: 3,
+      excerpt: "contains Search",
+    }]);
     render(<App api={{
       ...api,
       readMarkdownFile,
-      searchWorkspace: async (_root, query) => [{
-        relativePath: "guide.md",
-        name: "guide.md",
-        line: 3,
-        excerpt: `contains ${query}`,
-      }],
+      searchWorkspace,
     }} />);
     fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
     await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
 
-    fireEvent.click(screen.getByRole("button", { name: "查找" }));
-    fireEvent.change(screen.getByLabelText("工作区搜索"), { target: { value: "Search" } });
-    fireEvent.click(screen.getByRole("button", { name: "搜索工作区" }));
+    fireEvent.change(screen.getByLabelText("搜索工作区"), { target: { value: "Search" } });
 
+    await waitFor(() => expect(searchWorkspace).toHaveBeenCalledWith("/docs", "Search"));
     await waitFor(() => expect(screen.getByRole("button", { name: /guide.md 第 3 行/ })).toBeVisible());
     fireEvent.click(screen.getByRole("button", { name: /guide.md 第 3 行/ }));
 
     await waitFor(() => expect(readMarkdownFile).toHaveBeenCalledWith("/docs", "guide.md"));
     expect(screen.getByText("# Search Hit")).toBeVisible();
+  });
+
+  it("searches from the workspace sidebar as the user types and groups file and content matches", async () => {
+    const readMarkdownFile = vi.fn().mockResolvedValue({ relativePath: "guide.md", content: "# Sidebar Search" });
+    const searchWorkspace = vi.fn().mockResolvedValue([
+      { kind: "file", relativePath: "guide.md", name: "guide.md", line: null, excerpt: "guide.md" },
+      { kind: "content", relativePath: "guide.md", name: "guide.md", line: 7, excerpt: "sidebar match" },
+    ]);
+    render(<App api={{ ...api, readMarkdownFile, searchWorkspace }} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
+
+    fireEvent.change(screen.getByLabelText("搜索工作区"), { target: { value: "guide" } });
+    await waitFor(() => expect(searchWorkspace).toHaveBeenCalledWith("/docs", "guide"));
+
+    expect(await screen.findByText("文件名匹配")).toBeVisible();
+    expect(screen.getByText("正文匹配")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /guide.md 第 7 行/ }));
+    await waitFor(() => expect(readMarkdownFile).toHaveBeenCalledWith("/docs", "guide.md"));
+  });
+
+  it("opens file-name workspace search matches without showing a null line number", async () => {
+    const readMarkdownFile = vi.fn().mockResolvedValue({ relativePath: "guide.md", content: "# File Match" });
+    const searchWorkspace = vi.fn().mockResolvedValue([
+      { kind: "file", relativePath: "guide.md", name: "guide.md", line: null, excerpt: "guide.md" },
+    ]);
+    render(<App api={{ ...api, readMarkdownFile, searchWorkspace }} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
+
+    fireEvent.change(screen.getByLabelText("搜索工作区"), { target: { value: "guide" } });
+    const quickSearch = document.querySelector(".workspace-quick-search");
+    expect(quickSearch).not.toBeNull();
+    await waitFor(() => expect(within(quickSearch as HTMLElement).getByRole("button", { name: "guide.md" })).toBeVisible());
+    fireEvent.click(within(quickSearch as HTMLElement).getByRole("button", { name: "guide.md" }));
+
+    await waitFor(() => expect(screen.getByText(/已打开 guide\.md/)).toBeVisible());
+    expect(screen.queryByText(/null/)).not.toBeInTheDocument();
+  });
+
+  it("collapses and expands the workspace sidebar", async () => {
+    render(<App api={api} />);
+
+    expect(document.querySelector(".workspace-layout")?.classList.contains("sidebar-collapsed")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "折叠工作区" }));
+    expect(document.querySelector(".workspace-layout")?.classList.contains("sidebar-collapsed")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "展开工作区" }));
+    expect(document.querySelector(".workspace-layout")?.classList.contains("sidebar-collapsed")).toBe(false);
+  });
+
+  it("does not render an expanded sidebar at icon-rail width from older local preferences", () => {
+    localStorage.setItem("lumenmark.sidebarWidth", "56");
+    localStorage.setItem("lumenmark.sidebarCollapsed", "false");
+
+    render(<App api={api} />);
+
+    const layout = document.querySelector<HTMLElement>(".workspace-layout");
+    expect(layout?.classList.contains("sidebar-collapsed")).toBe(false);
+    expect(layout?.style.getPropertyValue("--sidebar-width")).toBe("220px");
   });
 
   it("offers to restore a saved local draft on startup", async () => {

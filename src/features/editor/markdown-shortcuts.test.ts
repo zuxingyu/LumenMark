@@ -47,6 +47,18 @@ describe("Markdown visual shortcut timing", () => {
     expect(normalizeCodeLanguage("mmd")).toBe("mermaid");
     expect(normalizeCodeLanguage("txt")).toBe("text");
     expect(normalizeCodeLanguage("yml")).toBe("yaml");
+    expect(parseEnterShortcut("```go")).toEqual({ kind: "code", language: "go" });
+    expect(parseEnterShortcut("```golang")).toEqual({ kind: "code", language: "go" });
+    expect(parseEnterShortcut("```js")).toEqual({ kind: "code", language: "javascript" });
+    expect(parseEnterShortcut("```ts")).toEqual({ kind: "code", language: "typescript" });
+    expect(parseEnterShortcut("```html")).toEqual({ kind: "code", language: "html" });
+    expect(parseEnterShortcut("```css")).toEqual({ kind: "code", language: "css" });
+    expect(parseEnterShortcut("```rs")).toEqual({ kind: "code", language: "rust" });
+    expect(parseEnterShortcut("```cpp")).toEqual({ kind: "code", language: "cpp" });
+    expect(parseEnterShortcut("```c++")).toEqual({ kind: "code", language: "cpp" });
+    expect(parseEnterShortcut("```c")).toEqual({ kind: "code", language: "cpp" });
+    expect(parseEnterShortcut("```php")).toEqual({ kind: "code", language: "php" });
+    expect(parseEnterShortcut("```xml")).toEqual({ kind: "code", language: "xml" });
   });
 
   it("extracts a Typora-style code fence language query", () => {
@@ -58,10 +70,15 @@ describe("Markdown visual shortcut timing", () => {
   });
 
   it("suggests searchable code block languages from the typed fence query", () => {
-    expect(getCodeLanguageSuggestions("j").map((language) => language.id)).toEqual(["json", "java"]);
+    expect(getCodeLanguageSuggestions("j").map((language) => language.id)).toEqual(["json", "java", "javascript"]);
     expect(getCodeLanguageSuggestions("py").map((language) => language.id)).toEqual(["python"]);
     expect(getCodeLanguageSuggestions("m").map((language) => language.id)).toEqual(["markdown", "mermaid"]);
     expect(getCodeLanguageSuggestions("y").map((language) => language.id)).toEqual(["yaml"]);
-    expect(getCodeLanguageSuggestions("x")).toEqual([]);
+    expect(getCodeLanguageSuggestions("go").map((language) => language.id)).toEqual(["go"]);
+    expect(getCodeLanguageSuggestions("ts").map((language) => language.id)).toEqual(["typescript"]);
+    expect(getCodeLanguageSuggestions("rs").map((language) => language.id)).toEqual(["rust"]);
+    expect(getCodeLanguageSuggestions("c").map((language) => language.id)).toEqual(["css", "cpp"]);
+    expect(getCodeLanguageSuggestions("x").map((language) => language.id)).toEqual(["xml"]);
+    expect(getCodeLanguageSuggestions("zz")).toEqual([]);
   });
 });

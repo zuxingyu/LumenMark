@@ -191,9 +191,14 @@ button.primary:hover:not(:disabled) {
 }
 
 .workspace-layout {
+  --sidebar-width: 264px;
   min-height: 0;
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) 6px minmax(0, 1fr);
+}
+
+.workspace-layout.sidebar-collapsed {
+  --sidebar-width: 56px;
 }
 
 .sidebar {
@@ -204,6 +209,40 @@ button.primary:hover:not(:disabled) {
   overflow-x: hidden;
   border-right: 1px solid var(--border);
   background: var(--sidebar);
+}
+
+.sidebar-resizer {
+  width: 6px;
+  min-width: 6px;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--sidebar);
+  cursor: col-resize;
+}
+
+.sidebar-resizer:hover {
+  background: var(--accent-soft);
+}
+
+.sidebar-icon-rail {
+  padding: 12px 8px;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 14px;
+  color: var(--muted);
+}
+
+.sidebar-icon-rail button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
 }
 
 .sidebar-title {
@@ -217,6 +256,17 @@ button.primary:hover:not(:disabled) {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.sidebar-collapse-button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
 }
 
 .document-menu {
@@ -355,8 +405,8 @@ button.primary:hover:not(:disabled) {
   z-index: 2;
   top: 12px;
   float: right;
-  width: min(760px, calc(100% - 48px));
-  margin: 12px 24px -110px 0;
+  width: min(520px, calc(100% - 48px));
+  margin: 12px 24px -58px 0;
   display: grid;
   gap: 8px;
 }
@@ -453,6 +503,60 @@ button.primary:hover:not(:disabled) {
   white-space: nowrap;
 }
 
+.workspace-quick-search {
+  margin: 10px 6px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-quick-search label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.workspace-quick-search input {
+  width: 100%;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  background: var(--page);
+}
+
+.quick-search-group {
+  display: grid;
+  gap: 4px;
+}
+
+.quick-search-group p {
+  margin: 5px 4px 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.quick-search-group button {
+  padding: 7px 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 7px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.quick-search-group small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mermaid-error {
   padding: 12px;
   border: 1px solid #dc6a62;
@@ -481,6 +585,42 @@ button.primary:hover:not(:disabled) {
 
 .crepe-root {
   min-height: calc(100vh - 185px);
+}
+
+.crepe-root .milkdown-code-block {
+  position: relative;
+}
+
+.code-wrap-toggle {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  right: 9px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--code-border);
+  border-radius: 6px;
+  color: var(--muted);
+  background: var(--page);
+  font-size: 12px;
+}
+
+.code-wrap-toggle[aria-pressed="false"] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.crepe-root .milkdown-code-block.code-wrap-off .cm-scroller {
+  overflow-x: auto;
+}
+
+.crepe-root .milkdown-code-block.code-wrap-off .cm-line {
+  white-space: pre;
+}
+
+.crepe-root .milkdown-code-block:not(.code-wrap-off) .cm-line {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .crepe-root .search-reveal {
@@ -563,7 +703,7 @@ button.primary:hover:not(:disabled) {
 }
 
 .crepe-root .milkdown-code-block .preview-toggle-button {
-  display: none;
+  display: none !important;
 }
 
 .code-language-search {
@@ -646,7 +786,7 @@ button.primary:hover:not(:disabled) {
 
 @media (max-width: 860px) {
   .workspace-layout {
-    grid-template-columns: 220px minmax(0, 1fr);
+    --sidebar-width: 220px;
   }
 
   .visual-editor,

@@ -12,7 +12,7 @@ interface WorkspaceSearchPanelProps {
 
 export function WorkspaceSearchPanel({ labels, disabled, results, onSearch, onOpenResult }: WorkspaceSearchPanelProps) {
   const [query, setQuery] = useState("");
-  const lineText = (line: number) => labels.lineLabel.replace("{line}", String(line));
+  const lineText = (line: number | null) => line === null ? "" : labels.lineLabel.replace("{line}", String(line));
 
   return (
     <section className="workspace-search">
@@ -34,7 +34,7 @@ export function WorkspaceSearchPanel({ labels, disabled, results, onSearch, onOp
             <button
               key={`${result.relativePath}:${result.line}:${result.excerpt}`}
               type="button"
-              aria-label={`${result.name} ${lineText(result.line)}: ${result.excerpt}`}
+              aria-label={result.kind === "file" ? result.name : `${result.name} ${lineText(result.line)}: ${result.excerpt}`}
               onClick={() => onOpenResult(result)}
             >
               <strong>{result.name}</strong>

@@ -1,10 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { FindReplaceBar } from "./components/FindReplaceBar";
 import { RecoveryDialog } from "./components/RecoveryDialog";
 import { Sidebar } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
 import { UnsavedDialog } from "./components/UnsavedDialog";
-import { WorkspaceSearchPanel } from "./components/WorkspaceSearchPanel";
 import { clearDraft, loadDraft, saveDraft, sessionFromDraft, shouldPersistDraft, type RecoveryDraft } from "./features/document/draft";
 import { createOpenedSession, createUntitledSession, editSession, markSaved } from "./features/document/session";
 import { buildOutline } from "./features/editor/document-tools";
@@ -19,6 +19,12 @@ interface AppProps {
 type PendingAction = (() => Promise<void>) | null;
 
 const VisualMarkdownEditor = lazy(() => import("./components/VisualMarkdownEditor").then((module) => ({ default: module.VisualMarkdownEditor })));
+const SIDEBAR_WIDTH_KEY = "lumenmark.sidebarWidth";
+const SIDEBAR_COLLAPSED_KEY = "lumenmark.sidebarCollapsed";
+const DEFAULT_SIDEBAR_WIDTH = 264;
+const COLLAPSED_SIDEBAR_WIDTH = 56;
+const MIN_EXPANDED_SIDEBAR_WIDTH = 220;
+const MAX_SIDEBAR_WIDTH = 360;
 
 function loadRecentWorkspaces(): RecentWorkspace[] {
   try {
@@ -27,6 +33,12 @@ function loadRecentWorkspaces(): RecentWorkspace[] {
   } catch {
     return [];
   }
+}
+
+function loadSidebarWidth(): number {
+  const parsed = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+  if (!Number.isFinite(parsed)) return DEFAULT_SIDEBAR_WIDTH;
+  return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_EXPANDED_SIDEBAR_WIDTH, parsed));
 }
 
 function mapEntryTree(entries: WorkspaceEntry[], relativePath: string, update: (entry: WorkspaceEntry) => WorkspaceEntry): WorkspaceEntry[] {
@@ -49,6 +61,8 @@ export function App({ api: providedApi }: AppProps) {
   const [findVisible, setFindVisible] = useState(false);
   const [searchResults, setSearchResults] = useState<WorkspaceSearchResult[]>([]);
   const [searchRevealText, setSearchRevealText] = useState<string>();
+  const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true");
   const [pendingDraft, setPendingDraft] = useState<RecoveryDraft | null>(() => loadDraft());
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [status, setStatus] = useState<string>(() => messages[initialLocale()].ready);
@@ -70,6 +84,14 @@ export function App({ api: providedApi }: AppProps) {
   useEffect(() => {
     localStorage.setItem(RECENT_WORKSPACES_KEY, JSON.stringify(recentWorkspaces));
   }, [recentWorkspaces]);
+
+  useEffect(() => {
+    if (!sidebarCollapsed) localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth));
+  }, [sidebarCollapsed, sidebarWidth]);
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -347,22 +369,53 @@ export function App({ api: providedApi }: AppProps) {
     setEditorKey((current) => current + 1);
   }
 
-  function searchWorkspace(query: string) {
+  const searchWorkspace = useCallback((query: string) => {
     if (!workspace) return;
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
     void attempt(async () => {
       const results = await api.searchWorkspace(workspace.root, query);
       setSearchResults(results);
       setStatus(locale === "zh-CN" ? `找到 ${results.length} 个匹配项` : `Found ${results.length} matches`);
     });
-  }
+  }, [api, attempt, locale, workspace]);
 
   function openSearchResult(result: WorkspaceSearchResult) {
     if (!workspace) return;
     afterDirty(async () => {
       const document = await api.readMarkdownFile(workspace.root, result.relativePath);
-      replaceSession(createOpenedSession("workspace", workspace.root, document.relativePath, document.content), result.excerpt);
-      setStatus(locale === "zh-CN" ? `已打开 ${result.name} 第 ${result.line} 行` : `Opened ${result.name} line ${result.line}`);
+      replaceSession(
+        createOpenedSession("workspace", workspace.root, document.relativePath, document.content),
+        result.kind === "content" ? result.excerpt : undefined,
+      );
+      setStatus(result.kind === "content" && result.line
+        ? (locale === "zh-CN" ? `已打开 ${result.name} 第 ${result.line} 行` : `Opened ${result.name} line ${result.line}`)
+        : (locale === "zh-CN" ? `已打开 ${result.name}` : `Opened ${result.name}`));
     });
+  }
+
+  function resizeSidebar(startEvent: ReactPointerEvent<HTMLButtonElement>) {
+    startEvent.currentTarget.setPointerCapture(startEvent.pointerId);
+    const originX = startEvent.clientX;
+    const originWidth = sidebarWidth;
+    const move = (event: PointerEvent) => {
+      const rawWidth = originWidth + event.clientX - originX;
+      if (rawWidth <= 96) {
+        setSidebarCollapsed(true);
+        setSidebarWidth(MIN_EXPANDED_SIDEBAR_WIDTH);
+        return;
+      }
+      setSidebarCollapsed(false);
+      setSidebarWidth(Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_EXPANDED_SIDEBAR_WIDTH, rawWidth)));
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
   }
 
   return (
@@ -379,7 +432,10 @@ export function App({ api: providedApi }: AppProps) {
         onFind={() => setFindVisible(true)}
         onToggleLocale={changeLocale}
       />
-      <div className="workspace-layout">
+      <div
+        className={sidebarCollapsed ? "workspace-layout sidebar-collapsed" : "workspace-layout"}
+        style={{ "--sidebar-width": `${sidebarCollapsed ? COLLAPSED_SIDEBAR_WIDTH : sidebarWidth}px` } as CSSProperties}
+      >
         <Sidebar
           labels={labels}
           workspace={workspace}
@@ -387,11 +443,22 @@ export function App({ api: providedApi }: AppProps) {
           entries={entries}
           outline={outline}
           activePath={workspace ? session.path ?? undefined : undefined}
+          collapsed={sidebarCollapsed}
+          searchResults={searchResults}
           onSelect={selectEntry}
           onSelectWorkspace={openRecentWorkspace}
           onRemoveWorkspace={removeWorkspace}
           onRename={renameDocument}
           onOutlineSelect={(item) => window.dispatchEvent(new CustomEvent("lumenmark:outline", { detail: item.id }))}
+          onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
+          onSearch={searchWorkspace}
+          onOpenSearchResult={openSearchResult}
+        />
+        <button
+          className="sidebar-resizer"
+          type="button"
+          aria-label={labels.workspace}
+          onPointerDown={resizeSidebar}
         />
         <main className="document-surface">
           {findVisible ? (
@@ -402,15 +469,7 @@ export function App({ api: providedApi }: AppProps) {
                 onReplace={replaceFromFind}
                 onClose={() => {
                   setFindVisible(false);
-                  setSearchResults([]);
                 }}
-              />
-              <WorkspaceSearchPanel
-                labels={labels}
-                disabled={!workspace}
-                results={searchResults}
-                onSearch={searchWorkspace}
-                onOpenResult={openSearchResult}
               />
             </div>
           ) : null}

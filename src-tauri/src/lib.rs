@@ -52,9 +52,10 @@ pub struct OperationResult {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceSearchResult {
+    pub kind: String,
     pub relative_path: String,
     pub name: String,
-    pub line: usize,
+    pub line: Option<usize>,
     pub excerpt: String,
 }
 
@@ -478,17 +479,28 @@ fn search_workspace(root: String, query: String) -> CommandResult<Vec<WorkspaceS
             Ok(content) => content,
             Err(_) => continue,
         };
+        let name = file
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default()
+            .to_string();
+        let relative_path = relative_string(&root_path, &file)?;
+        if name.to_lowercase().contains(&query) || relative_path.to_lowercase().contains(&query) {
+            results.push(WorkspaceSearchResult {
+                kind: "file".to_string(),
+                relative_path: relative_path.clone(),
+                name: name.clone(),
+                line: None,
+                excerpt: relative_path.clone(),
+            });
+        }
         for (index, line) in content.lines().enumerate() {
             if line.to_lowercase().contains(&query) {
-                let name = file
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .unwrap_or_default()
-                    .to_string();
                 results.push(WorkspaceSearchResult {
-                    relative_path: relative_string(&root_path, &file)?,
-                    name,
-                    line: index + 1,
+                    kind: "content".to_string(),
+                    relative_path: relative_path.clone(),
+                    name: name.clone(),
+                    line: Some(index + 1),
                     excerpt: line.trim().to_string(),
                 });
             }
@@ -772,9 +784,43 @@ mod tests {
         .expect("search results");
 
         assert_eq!(results.len(), 1);
+        assert_eq!(results[0].kind, "content");
         assert_eq!(results[0].relative_path, "docs/guide.md");
-        assert_eq!(results[0].line, 2);
+        assert_eq!(results[0].line, Some(2));
         assert_eq!(results[0].excerpt, "needle here");
+    }
+
+    #[test]
+    fn searches_markdown_file_names_and_content_with_result_kinds() {
+        let root = tempdir().expect("temp search");
+        fs::create_dir(root.path().join("docs")).expect("docs");
+        fs::write(root.path().join("docs/needle-guide.md"), "first\nneedle here").expect("fixture");
+        fs::write(root.path().join("docs/other.md"), "needle elsewhere").expect("fixture");
+
+        let results = super::search_workspace(
+            root.path().to_string_lossy().to_string(),
+            "needle".to_string(),
+        )
+        .expect("search results");
+
+        assert!(results.iter().any(|result| {
+            result.kind == "file"
+                && result.relative_path == "docs/needle-guide.md"
+                && result.line.is_none()
+                && result.excerpt == "docs/needle-guide.md"
+        }));
+        assert!(results.iter().any(|result| {
+            result.kind == "content"
+                && result.relative_path == "docs/needle-guide.md"
+                && result.line == Some(2)
+                && result.excerpt == "needle here"
+        }));
+        assert!(results.iter().any(|result| {
+            result.kind == "content"
+                && result.relative_path == "docs/other.md"
+                && result.line == Some(1)
+                && result.excerpt == "needle elsewhere"
+        }));
     }
 
     #[test]

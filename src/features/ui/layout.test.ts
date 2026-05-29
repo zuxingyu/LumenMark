@@ -27,6 +27,19 @@ describe("application layout", () => {
 
   it("does not expose a manual Mermaid preview toggle button", () => {
     expect(styles).toContain(".milkdown-code-block .preview-toggle-button");
-    expect(cssRule(".crepe-root .milkdown-code-block .preview-toggle-button")).toContain("display: none");
+    expect(cssRule(".crepe-root .milkdown-code-block .preview-toggle-button")).toContain("display: none !important");
+  });
+
+  it("supports a collapsible and resizable workspace sidebar", () => {
+    expect(styles).toContain("--sidebar-width");
+    expect(styles).toContain(".workspace-layout.sidebar-collapsed");
+    expect(cssRule(".sidebar-resizer")).toContain("cursor: col-resize");
+    expect(cssRule(".workspace-layout.sidebar-collapsed")).toContain("--sidebar-width: 56px");
+  });
+
+  it("adds a per-code-block wrap toggle with a horizontal-scroll off state", () => {
+    expect(cssRule(".code-wrap-toggle")).toContain("position: absolute");
+    expect(cssRule(".crepe-root .milkdown-code-block.code-wrap-off .cm-scroller")).toContain("overflow-x: auto");
+    expect(cssRule(".crepe-root .milkdown-code-block.code-wrap-off .cm-line")).toContain("white-space: pre");
   });
 });

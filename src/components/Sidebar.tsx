@@ -1,7 +1,8 @@
-import { ChevronDown, ChevronRight, FileText, Folder, FolderTree, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, FileText, Folder, FolderTree, PanelLeftOpen, X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Messages } from "../i18n";
-import type { OutlineItem, RecentWorkspace, WorkspaceEntry, WorkspaceInfo } from "../types";
+import type { OutlineItem, RecentWorkspace, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "../types";
+import { WorkspaceQuickSearch } from "./WorkspaceQuickSearch";
 
 interface SidebarProps {
   labels: Messages;
@@ -10,14 +11,19 @@ interface SidebarProps {
   entries: WorkspaceEntry[];
   outline: OutlineItem[];
   activePath?: string;
+  collapsed: boolean;
+  searchResults: WorkspaceSearchResult[];
   onSelect(entry: WorkspaceEntry): void;
   onSelectWorkspace(workspace: RecentWorkspace): void;
   onRemoveWorkspace(workspace: RecentWorkspace): void;
   onRename(): void;
   onOutlineSelect(item: OutlineItem): void;
+  onToggleCollapsed(): void;
+  onSearch(query: string): void;
+  onOpenSearchResult(result: WorkspaceSearchResult): void;
 }
 
-export function Sidebar({ labels, workspace, recentWorkspaces, entries, outline, activePath, onSelect, onSelectWorkspace, onRemoveWorkspace, onRename, onOutlineSelect }: SidebarProps) {
+export function Sidebar({ labels, workspace, recentWorkspaces, entries, outline, activePath, collapsed, searchResults, onSelect, onSelectWorkspace, onRemoveWorkspace, onRename, onOutlineSelect, onToggleCollapsed, onSearch, onOpenSearchResult }: SidebarProps) {
   function treeRow(entry: WorkspaceEntry, depth = 0): ReactNode {
     const isDirectory = entry.kind === "directory";
     return (
@@ -36,16 +42,37 @@ export function Sidebar({ labels, workspace, recentWorkspaces, entries, outline,
       </div>
     );
   }
+  if (collapsed) {
+    return (
+      <aside className="sidebar sidebar-icon-rail" aria-label={labels.workspace}>
+        <button type="button" aria-label={labels.expandSidebar} onClick={onToggleCollapsed}>
+          <PanelLeftOpen size={18} />
+        </button>
+        <FolderTree size={18} />
+        <FileText size={18} />
+      </aside>
+    );
+  }
   return (
     <aside className="sidebar">
       <div className="sidebar-title">
         <span>{labels.workspace}</span>
+        <button className="sidebar-collapse-button" type="button" aria-label={labels.collapseSidebar} onClick={onToggleCollapsed}>
+          <ChevronLeft size={15} />
+        </button>
         {activePath ? (
           <div className="document-menu">
             <button type="button" aria-label={labels.rename} onClick={onRename}>{labels.rename}</button>
           </div>
         ) : null}
       </div>
+      <WorkspaceQuickSearch
+        labels={labels}
+        disabled={!workspace}
+        results={searchResults}
+        onSearch={onSearch}
+        onOpenResult={onOpenSearchResult}
+      />
       {recentWorkspaces.length ? <p className="sidebar-section">{labels.recentWorkspaces}</p> : null}
       {recentWorkspaces.map((recent) => (
         <div className="recent-workspace" key={recent.root}>

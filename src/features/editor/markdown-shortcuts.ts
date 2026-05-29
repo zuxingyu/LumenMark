@@ -27,7 +27,16 @@ export const CODE_LANGUAGE_SELECTED_EVENT = "lumenmark:code-language-selected";
 export const codeLanguageOptions: CodeLanguageOption[] = [
   { id: "json", label: "JSON", aliases: ["json"] },
   { id: "java", label: "Java", aliases: ["java"] },
+  { id: "javascript", label: "JavaScript", aliases: ["javascript", "js"] },
+  { id: "typescript", label: "TypeScript", aliases: ["typescript", "ts"] },
+  { id: "go", label: "Go", aliases: ["go", "golang"] },
   { id: "python", label: "Python", aliases: ["python", "py"] },
+  { id: "html", label: "HTML", aliases: ["html"] },
+  { id: "css", label: "CSS", aliases: ["css"] },
+  { id: "rust", label: "Rust", aliases: ["rust", "rs"] },
+  { id: "cpp", label: "C++", aliases: ["cpp", "c++", "c"] },
+  { id: "php", label: "PHP", aliases: ["php"] },
+  { id: "xml", label: "XML", aliases: ["xml"] },
   { id: "shell", label: "Shell", aliases: ["shell", "sh", "bash"] },
   { id: "sql", label: "SQL", aliases: ["sql"] },
   { id: "yaml", label: "YAML", aliases: ["yaml", "yml"] },
@@ -47,6 +56,21 @@ const legacyCodeLanguageAliases = new Map([
   ["json", "json"],
   ["python", "python"],
   ["py", "python"],
+  ["go", "go"],
+  ["golang", "go"],
+  ["javascript", "javascript"],
+  ["js", "javascript"],
+  ["typescript", "typescript"],
+  ["ts", "typescript"],
+  ["html", "html"],
+  ["css", "css"],
+  ["rust", "rust"],
+  ["rs", "rust"],
+  ["cpp", "cpp"],
+  ["c++", "cpp"],
+  ["c", "cpp"],
+  ["php", "php"],
+  ["xml", "xml"],
   ["java", "java"],
   ["shell", "shell"],
   ["sh", "shell"],
@@ -91,12 +115,14 @@ export function parseEnterShortcut(lineText: string): EnterShortcut | null {
     };
   }
 
-  const code = /^```([A-Za-z0-9_-]+)\s*$/.exec(lineText);
+  const code = /^```([A-Za-z0-9_+-]+)\s*$/.exec(lineText);
   if (code) {
-    const suggested = getCodeLanguageSuggestions(code[1])[0]?.id;
+    const normalized = normalizeCodeLanguage(code[1]);
+    const exactMatch = codeLanguageOptions.some((language) => language.id === normalized);
+    const suggested = exactMatch ? normalized : getCodeLanguageSuggestions(code[1])[0]?.id;
     return {
       kind: "code",
-      language: suggested ?? normalizeCodeLanguage(code[1]),
+      language: suggested ?? normalized,
     };
   }
 
