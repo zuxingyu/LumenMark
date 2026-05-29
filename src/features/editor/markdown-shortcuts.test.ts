@@ -38,12 +38,15 @@ describe("Markdown visual shortcut timing", () => {
     expect(parseEnterShortcut("```shell")).toEqual({ kind: "code", language: "shell" });
     expect(parseEnterShortcut("```bash")).toEqual({ kind: "code", language: "shell" });
     expect(parseEnterShortcut("```sql")).toEqual({ kind: "code", language: "sql" });
+    expect(parseEnterShortcut("```yaml")).toEqual({ kind: "code", language: "yaml" });
+    expect(parseEnterShortcut("```yml")).toEqual({ kind: "code", language: "yaml" });
     expect(parseEnterShortcut("```markdown")).toEqual({ kind: "code", language: "markdown" });
     expect(parseEnterShortcut("```mermaid")).toEqual({ kind: "code", language: "mermaid" });
     expect(parseEnterShortcut("```text")).toEqual({ kind: "code", language: "text" });
     expect(normalizeCodeLanguage("md")).toBe("markdown");
     expect(normalizeCodeLanguage("mmd")).toBe("mermaid");
     expect(normalizeCodeLanguage("txt")).toBe("text");
+    expect(normalizeCodeLanguage("yml")).toBe("yaml");
   });
 
   it("extracts a Typora-style code fence language query", () => {
@@ -58,6 +61,7 @@ describe("Markdown visual shortcut timing", () => {
     expect(getCodeLanguageSuggestions("j").map((language) => language.id)).toEqual(["json", "java"]);
     expect(getCodeLanguageSuggestions("py").map((language) => language.id)).toEqual(["python"]);
     expect(getCodeLanguageSuggestions("m").map((language) => language.id)).toEqual(["markdown", "mermaid"]);
+    expect(getCodeLanguageSuggestions("y").map((language) => language.id)).toEqual(["yaml"]);
     expect(getCodeLanguageSuggestions("x")).toEqual([]);
   });
 });

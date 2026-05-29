@@ -3,6 +3,7 @@ import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { python } from "@codemirror/lang-python";
 import { PostgreSQL, sql } from "@codemirror/lang-sql";
+import { yaml } from "@codemirror/lang-yaml";
 import { LanguageDescription, LanguageSupport, StreamLanguage } from "@codemirror/language";
 import { shell } from "@codemirror/legacy-modes/mode/shell";
 import { CrepeBuilder } from "@milkdown/crepe/builder";
@@ -21,6 +22,7 @@ import "@milkdown/crepe/theme/frame.css";
 import { useEffect, useRef, useState } from "react";
 import type { Messages } from "../i18n";
 import { lumenCodeTheme } from "../features/editor/code-theme";
+import { runFormatCommand } from "../features/editor/format-menu";
 import {
   CODE_LANGUAGE_SELECTED_EVENT,
   type CodeFenceSearchState,
@@ -28,6 +30,7 @@ import {
   enterConfirmedMarkdownShortcutsWithSearch,
   normalizeCodeLanguage,
 } from "../features/editor/markdown-shortcuts";
+import { markdownPasteAsRichText } from "../features/editor/markdown-paste";
 import { renderMermaidPreview } from "../features/editor/mermaid-preview";
 
 interface VisualMarkdownEditorProps {
@@ -49,6 +52,7 @@ const codeLanguages = [
     support: new LanguageSupport(StreamLanguage.define(shell)),
   }),
   LanguageDescription.of({ name: "Python", alias: ["python", "py"], extensions: ["py"], support: python() }),
+  LanguageDescription.of({ name: "YAML", alias: ["yaml", "yml"], extensions: ["yaml", "yml"], support: yaml() }),
   LanguageDescription.of({ name: "Markdown", alias: ["markdown", "md"], extensions: ["md"], support: markdown() }),
   LanguageDescription.of({ name: "Mermaid", alias: ["mermaid", "mmd"], extensions: ["mmd"], support: markdown() }),
   LanguageDescription.of({ name: "Text", alias: ["text", "txt"], extensions: ["txt"], support: markdown() }),
@@ -75,6 +79,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
       defaultValue: value,
     })
       .addFeature(cursor)
+      .addFeature(markdownPasteAsRichText)
       .addFeature(enterConfirmedMarkdownShortcutsWithSearch(setLanguageSearch))
       .addFeature(listItem)
       .addFeature(linkTooltip)
@@ -95,6 +100,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
           renderLanguage: (language) => renderCodeLanguage(language),
           previewLabel: "Mermaid",
           previewLoading: labels.diagramLoading,
+          previewOnlyByDefault: true,
           renderPreview: (language, source, applyPreview) => {
             if (language.toLowerCase() !== "mermaid") return null;
             void import("mermaid").then(({ default: mermaid }) => {
@@ -120,8 +126,23 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
       heading?.focus();
     }
     window.addEventListener("lumenmark:outline", focusHeading);
+    function runFormatFromWindow(event: Event) {
+      const command = (event as CustomEvent<string>).detail;
+      if (command) runFormatCommand(editor.editor, command);
+    }
+    window.addEventListener("lumenmark:format-command", runFormatFromWindow);
+    let unlistenFormatMenu: (() => void) | undefined;
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      void import("@tauri-apps/api/event")
+        .then(({ listen }) => listen<string>("format-command", (event) => runFormatCommand(editor.editor, event.payload)))
+        .then((unlisten) => {
+          unlistenFormatMenu = unlisten;
+        });
+    }
     return () => {
       window.removeEventListener("lumenmark:outline", focusHeading);
+      window.removeEventListener("lumenmark:format-command", runFormatFromWindow);
+      unlistenFormatMenu?.();
       void editor.destroy();
     };
   }, []);

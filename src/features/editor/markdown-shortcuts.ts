@@ -30,6 +30,7 @@ export const codeLanguageOptions: CodeLanguageOption[] = [
   { id: "python", label: "Python", aliases: ["python", "py"] },
   { id: "shell", label: "Shell", aliases: ["shell", "sh", "bash"] },
   { id: "sql", label: "SQL", aliases: ["sql"] },
+  { id: "yaml", label: "YAML", aliases: ["yaml", "yml"] },
   { id: "markdown", label: "Markdown", aliases: ["markdown", "md"] },
   { id: "mermaid", label: "Mermaid", aliases: ["mermaid", "mmd"] },
   { id: "text", label: "Text", aliases: ["text", "txt"] },
@@ -51,6 +52,8 @@ const legacyCodeLanguageAliases = new Map([
   ["sh", "shell"],
   ["bash", "shell"],
   ["sql", "sql"],
+  ["yaml", "yaml"],
+  ["yml", "yaml"],
 ]);
 
 export function normalizeCodeLanguage(language: string): string {

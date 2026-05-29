@@ -480,6 +480,14 @@ button.primary:hover:not(:disabled) {
   caret-color: var(--text);
 }
 
+.crepe-root .milkdown-code-block.selected .codemirror-host.hidden {
+  display: block !important;
+}
+
+.crepe-root .milkdown-code-block.selected .preview-panel {
+  display: none;
+}
+
 .code-language-search {
   position: absolute;
   z-index: 8;

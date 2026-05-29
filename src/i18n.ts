@@ -110,6 +110,14 @@ export function codeLanguageLabel(language: string): string {
     sh: "Shell",
     shell: "Shell",
     sql: "SQL",
+    yaml: "YAML",
+    yml: "YAML",
+    markdown: "Markdown",
+    md: "Markdown",
+    mermaid: "Mermaid",
+    mmd: "Mermaid",
+    text: "Text",
+    txt: "Text",
   };
   return labels[language.toLowerCase()] ?? (language || "Text");
 }

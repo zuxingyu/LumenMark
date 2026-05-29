@@ -6,6 +6,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Mutex,
 };
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{Emitter, Manager};
 
 type CommandResult<T> = Result<T, String>;
@@ -52,6 +53,120 @@ pub struct OperationResult {
 struct ExternalDocumentState {
     pending: Mutex<Vec<OpenedDocument>>,
     frontend_ready: AtomicBool,
+}
+
+const FORMAT_MENU_ITEMS: &[(&str, &str, &str, Option<&str>)] = &[
+    ("format-paragraph", "paragraph", "段落 Paragraph", Some("CmdOrCtrl+0")),
+    ("format-heading-1", "heading-1", "标题 1 Heading 1", Some("CmdOrCtrl+1")),
+    ("format-heading-2", "heading-2", "标题 2 Heading 2", Some("CmdOrCtrl+2")),
+    ("format-heading-3", "heading-3", "标题 3 Heading 3", Some("CmdOrCtrl+3")),
+    ("format-heading-4", "heading-4", "标题 4 Heading 4", Some("CmdOrCtrl+4")),
+    ("format-heading-5", "heading-5", "标题 5 Heading 5", Some("CmdOrCtrl+5")),
+    ("format-heading-6", "heading-6", "标题 6 Heading 6", Some("CmdOrCtrl+6")),
+    ("format-blockquote", "blockquote", "引用 Quote", Some("CmdOrCtrl+Shift+Q")),
+    ("format-bullet-list", "bullet-list", "无序列表 Bullet List", Some("CmdOrCtrl+Shift+8")),
+    ("format-ordered-list", "ordered-list", "有序列表 Ordered List", Some("CmdOrCtrl+Shift+7")),
+    ("format-task-list", "task-list", "任务列表 Task List", None),
+    ("format-code-block", "code-block", "代码块 Code Block", Some("CmdOrCtrl+Shift+K")),
+    ("format-strong", "strong", "加粗 Bold", Some("CmdOrCtrl+B")),
+    ("format-emphasis", "emphasis", "斜体 Italic", Some("CmdOrCtrl+I")),
+    ("format-strikethrough", "strikethrough", "删除线 Strikethrough", Some("CmdOrCtrl+Shift+X")),
+    ("format-inline-code", "inline-code", "行内代码 Inline Code", Some("CmdOrCtrl+Shift+C")),
+    ("format-link", "link", "链接 Link", Some("CmdOrCtrl+K")),
+];
+
+fn format_command_from_menu_id(id: &str) -> Option<&'static str> {
+    FORMAT_MENU_ITEMS
+        .iter()
+        .find(|(menu_id, _, _, _)| *menu_id == id)
+        .map(|(_, command, _, _)| *command)
+}
+
+fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<Menu<R>> {
+    let format_items = FORMAT_MENU_ITEMS
+        .iter()
+        .map(|(id, _, label, accelerator)| MenuItem::with_id(app, *id, *label, true, *accelerator))
+        .collect::<tauri::Result<Vec<_>>>()?;
+
+    Menu::with_items(
+        app,
+        &[
+            #[cfg(target_os = "macos")]
+            &Submenu::with_items(
+                app,
+                app.package_info().name.clone(),
+                true,
+                &[
+                    &PredefinedMenuItem::about(app, None, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::services(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::hide(app, None)?,
+                    &PredefinedMenuItem::hide_others(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::quit(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
+                "文件 File",
+                true,
+                &[
+                    &PredefinedMenuItem::close_window(app, None)?,
+                    #[cfg(not(target_os = "macos"))]
+                    &PredefinedMenuItem::quit(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
+                "编辑 Edit",
+                true,
+                &[
+                    &PredefinedMenuItem::undo(app, None)?,
+                    &PredefinedMenuItem::redo(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &PredefinedMenuItem::cut(app, None)?,
+                    &PredefinedMenuItem::copy(app, None)?,
+                    &PredefinedMenuItem::paste(app, None)?,
+                    &PredefinedMenuItem::select_all(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
+                "格式 Format",
+                true,
+                &[
+                    &format_items[0],
+                    &PredefinedMenuItem::separator(app)?,
+                    &format_items[1],
+                    &format_items[2],
+                    &format_items[3],
+                    &format_items[4],
+                    &format_items[5],
+                    &format_items[6],
+                    &PredefinedMenuItem::separator(app)?,
+                    &format_items[7],
+                    &format_items[8],
+                    &format_items[9],
+                    &format_items[10],
+                    &format_items[11],
+                    &PredefinedMenuItem::separator(app)?,
+                    &format_items[12],
+                    &format_items[13],
+                    &format_items[14],
+                    &format_items[15],
+                    &format_items[16],
+                ],
+            )?,
+            #[cfg(target_os = "macos")]
+            &Submenu::with_items(
+                app,
+                "显示 View",
+                true,
+                &[&PredefinedMenuItem::fullscreen(app, None)?],
+            )?,
+        ],
+    )
 }
 
 fn has_only_normal_components(path: &Path) -> bool {
@@ -390,6 +505,12 @@ pub fn run() {
     }
 
     builder
+        .menu(build_app_menu)
+        .on_menu_event(|app, event| {
+            if let Some(command) = format_command_from_menu_id(event.id().as_ref()) {
+                let _ = app.emit("format-command", command);
+            }
+        })
         .plugin(tauri_plugin_opener::init())
         .setup(|_app| {
             #[cfg(target_os = "windows")]
@@ -554,5 +675,18 @@ mod tests {
         let config = include_str!("../tauri.conf.json");
         assert!(config.contains("\"type\": \"offlineInstaller\""));
         assert!(!config.contains("\"type\": \"downloadBootstrapper\""));
+    }
+
+    #[test]
+    fn desktop_menu_declares_typora_style_format_commands() {
+        assert_eq!(super::format_command_from_menu_id("format-paragraph"), Some("paragraph"));
+        assert_eq!(super::format_command_from_menu_id("format-heading-1"), Some("heading-1"));
+        assert_eq!(super::format_command_from_menu_id("format-heading-6"), Some("heading-6"));
+        assert_eq!(super::format_command_from_menu_id("format-link"), Some("link"));
+        assert_eq!(super::format_command_from_menu_id("not-format-link"), None);
+        let source = include_str!("lib.rs");
+        assert!(source.contains(".menu("));
+        assert!(source.contains(".on_menu_event("));
+        assert!(source.contains("format-command"));
     }
 }
