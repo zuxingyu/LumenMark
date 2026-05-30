@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import { createRoot } from "react-dom/client";
 import { FindReplaceBar } from "./components/FindReplaceBar";
 import { RecoveryDialog } from "./components/RecoveryDialog";
 import { Sidebar } from "./components/Sidebar";
@@ -10,13 +11,15 @@ import { createOpenedSession, createUntitledSession, editSession, markSaved } fr
 import { buildOutline } from "./features/editor/document-tools";
 import {
   buildStandaloneHtml,
-  cloneDocumentBody,
   collectExportStyles,
+  createExportPreviewHost,
   exportFileName,
   renderElementToPdfBase64,
   renderElementToPngBase64,
+  waitForExportPreviewReady,
   type ExportFormat,
 } from "./features/export/document-export";
+import { MarkdownPreview } from "./features/preview/MarkdownPreview";
 import { initialLocale, LOCALE_KEY, messages, RECENT_WORKSPACES_KEY, type Locale } from "./i18n";
 import { createDemoApi, firstMarkdownPath, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
 import type { DocumentSession, OpenedDocument, RecentWorkspace, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "./types";
@@ -121,32 +124,39 @@ export function App({ api: providedApi }: AppProps) {
   }
 
   async function exportDocument(format: ExportFormat) {
-    const root = document.querySelector<HTMLElement>(".crepe-root");
-    if (!root) return;
     const defaultName = exportFileName(session.title || "document", format);
-    const clone = cloneDocumentBody(root);
-    if (format === "html") {
-      const html = buildStandaloneHtml({
-        title: session.title || defaultName,
-        body: clone.innerHTML,
-        styles: collectExportStyles(),
-      });
-      const saved = await api.saveExportTextFile(defaultName, html);
-      if (saved) setStatus(labels.exportComplete.replace("{name}", saved.split(/[\\/]/).at(-1) ?? saved));
-      return;
-    }
-
-    const host = document.createElement("div");
-    host.className = "export-capture-host";
-    host.append(clone);
-    document.body.append(host);
+    const host = createExportPreviewHost();
+    const previewRoot = createRoot(host);
     try {
+      previewRoot.render(
+        <MarkdownPreview
+          locale={locale}
+          source={session.sourceText}
+          imageResolver={assetContext ? (source) => api.readWorkspaceAsset(assetContext.root, assetContext.path, source) : undefined}
+        />,
+      );
+      await waitForExportPreviewReady(host);
+      const preview = host.querySelector<HTMLElement>(".markdown-preview");
+      if (!preview) throw new Error("Export preview did not render.");
+
+      if (format === "html") {
+        const html = buildStandaloneHtml({
+          title: session.title || defaultName,
+          body: preview.innerHTML,
+          styles: collectExportStyles(),
+        });
+        const saved = await api.saveExportTextFile(defaultName, html);
+        if (saved) setStatus(labels.exportComplete.replace("{name}", saved.split(/[\\/]/).at(-1) ?? saved));
+        return;
+      }
+
       const contentBase64 = format === "png"
-        ? await renderElementToPngBase64(clone)
-        : await renderElementToPdfBase64(clone);
+        ? await renderElementToPngBase64(preview)
+        : await renderElementToPdfBase64(preview);
       const saved = await api.saveExportBinaryFile(defaultName, contentBase64);
       if (saved) setStatus(labels.exportComplete.replace("{name}", saved.split(/[\\/]/).at(-1) ?? saved));
     } finally {
+      previewRoot.unmount();
       host.remove();
     }
   }

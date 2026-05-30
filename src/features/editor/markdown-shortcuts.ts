@@ -106,7 +106,7 @@ export function getNextCodeLanguageSelection(current: number, total: number, key
 }
 
 export function shouldKeepLiteralSpace(lineBeforeCursor: string): boolean {
-  return /^(#{1,6}|[-+*]|\d+\.|>|\[(?: |x|X)\]|---|\*\*\*|___|\|\d+[xX]\d+\||```[A-Za-z0-9_-]*)$/.test(
+  return /^(#{1,6}|>|\[(?: |x|X)\]|---|\*\*\*|___|\|\d+[xX]\d+\||```[A-Za-z0-9_-]*)$/.test(
     lineBeforeCursor,
   );
 }

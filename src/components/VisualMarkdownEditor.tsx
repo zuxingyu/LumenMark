@@ -40,6 +40,7 @@ import {
 } from "../features/editor/markdown-shortcuts";
 import { markdownPasteAsRichText } from "../features/editor/markdown-paste";
 import { renderMermaidPreview } from "../features/editor/mermaid-preview";
+import { typoraInlineSyntax } from "../features/markdown/typora-inline";
 
 interface VisualMarkdownEditorProps {
   labels: Messages;
@@ -97,6 +98,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
       defaultValue: value,
     })
       .addFeature(cursor)
+      .addFeature(typoraInlineSyntax)
       .addFeature(markdownPasteAsRichText)
       .addFeature(enterConfirmedMarkdownShortcutsWithSearch(setLanguageSearch))
       .addFeature(listItem)
@@ -136,7 +138,13 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
     });
     let cleanupCodeBlocks: (() => void) | undefined;
     void editor.create().then(() => {
-      if (editorRoot.current) cleanupCodeBlocks = enhanceCodeBlockControls(editorRoot.current, { wrapLabel: labels.wrapCode, copyLabel: labels.copy });
+      if (editorRoot.current) {
+        cleanupCodeBlocks = enhanceCodeBlockControls(editorRoot.current, {
+          wrapLabel: labels.wrapCode,
+          copyLabel: labels.copy,
+          copiedLabel: labels.copied,
+        });
+      }
       if (!revealText?.trim()) return;
       window.setTimeout(() => {
         const normalized = revealText.trim().replace(/\s+/g, " ");

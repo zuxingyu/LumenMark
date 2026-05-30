@@ -113,6 +113,8 @@ const FORMAT_MENU_ITEMS: &[(&str, &str, MenuText, Option<&str>)] = &[
     ("format-strong", "strong", MenuText { zh: "加粗", en: "Bold" }, Some("CmdOrCtrl+B")),
     ("format-emphasis", "emphasis", MenuText { zh: "斜体", en: "Italic" }, Some("CmdOrCtrl+I")),
     ("format-strikethrough", "strikethrough", MenuText { zh: "删除线", en: "Strikethrough" }, Some("CmdOrCtrl+Shift+X")),
+    ("format-superscript", "superscript", MenuText { zh: "上标", en: "Superscript" }, None),
+    ("format-subscript", "subscript", MenuText { zh: "下标", en: "Subscript" }, None),
     ("format-inline-code", "inline-code", MenuText { zh: "行内代码", en: "Inline Code" }, Some("CmdOrCtrl+Shift+C")),
     ("format-link", "link", MenuText { zh: "链接", en: "Link" }, Some("CmdOrCtrl+K")),
 ];
@@ -215,6 +217,8 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                     &format_items[14],
                     &format_items[15],
                     &format_items[16],
+                    &format_items[17],
+                    &format_items[18],
                 ],
             )?,
             #[cfg(target_os = "macos")]
@@ -965,6 +969,8 @@ mod tests {
         assert_eq!(super::format_command_from_menu_id("format-paragraph"), Some("paragraph"));
         assert_eq!(super::format_command_from_menu_id("format-heading-1"), Some("heading-1"));
         assert_eq!(super::format_command_from_menu_id("format-heading-6"), Some("heading-6"));
+        assert_eq!(super::format_command_from_menu_id("format-superscript"), Some("superscript"));
+        assert_eq!(super::format_command_from_menu_id("format-subscript"), Some("subscript"));
         assert_eq!(super::format_command_from_menu_id("format-link"), Some("link"));
         assert_eq!(super::format_command_from_menu_id("not-format-link"), None);
         let source = include_str!("lib.rs");

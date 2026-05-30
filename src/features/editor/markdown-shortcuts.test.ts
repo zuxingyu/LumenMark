@@ -10,15 +10,21 @@ import {
 import { getNextCodeLineIndent } from "./code-block-enhancements";
 
 describe("Markdown visual shortcut timing", () => {
-  it("keeps block syntax literal when the user presses Space", () => {
+  it("keeps delayed block syntax literal when the user presses Space", () => {
     expect(shouldKeepLiteralSpace("#")).toBe(true);
     expect(shouldKeepLiteralSpace("##")).toBe(true);
     expect(shouldKeepLiteralSpace("###")).toBe(true);
-    expect(shouldKeepLiteralSpace("-")).toBe(true);
-    expect(shouldKeepLiteralSpace("1.")).toBe(true);
     expect(shouldKeepLiteralSpace(">")).toBe(true);
     expect(shouldKeepLiteralSpace("```json")).toBe(true);
     expect(shouldKeepLiteralSpace("normal")).toBe(false);
+  });
+
+  it("lets built-in list input rules handle list markers followed by Space", () => {
+    expect(shouldKeepLiteralSpace("*")).toBe(false);
+    expect(shouldKeepLiteralSpace("-")).toBe(false);
+    expect(shouldKeepLiteralSpace("+")).toBe(false);
+    expect(shouldKeepLiteralSpace("1.")).toBe(false);
+    expect(shouldKeepLiteralSpace("12.")).toBe(false);
   });
 
   it("converts non-empty heading syntax only when Enter is pressed", () => {

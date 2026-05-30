@@ -41,19 +41,18 @@ The sample workspace at `examples/workspace/architecture.md` exercises formulas,
 
 ## Releases
 
-Pushing the `v0.3.6` version tag creates a GitHub Release with:
+Pushing the `v0.3.7` version tag creates a GitHub Release with:
 
 - `LumenMark_<version>_x64-setup.exe` for Windows x64 (NSIS, per-user installation, bundled WebView2 offline installer).
 - `LumenMark_<version>_aarch64.dmg` for macOS Apple Silicon.
 
-Version `v0.3.6` adds direct HTML, PDF, and PNG export, cleans up the writing surface, and fixes several editor regressions. The native menu now follows the selected language, untitled documents no longer show an extra title header, dark mode styling is more complete, workspace folders without Markdown content are hidden, long sidebar names can scroll horizontally, code block controls no longer overlap, code fence suggestions support keyboard selection, code block Enter preserves useful indentation, and Shell comments are highlighted more consistently. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. macOS uses the system WebKit runtime, so the `.dmg` being much smaller than the Windows installer is expected; installation and launch do not download an additional runtime. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
+Version `v0.3.7` focuses on stability. It adds Typora-style superscript and subscript syntax, restores manual unordered and ordered list input rules, exports HTML/PDF/PNG from a read-only preview DOM so Mermaid diagrams are rendered instead of saved as code blocks, and shows a short success state after copying a code block. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. macOS uses the system WebKit runtime, so the `.dmg` being much smaller than the Windows installer is expected; installation and launch do not download an additional runtime. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
 
 ## Roadmap
 
-- `v0.3.7`: Theme, font, reading width, and code theme settings.
-- `v0.3.8`: Sticky outline, heading folding, and stronger outline/editor synchronization.
-- `v0.3.9`: Mermaid and math templates with friendlier errors.
-- `v0.4.0`: Signing, notarization, automatic updates, and release checksums.
+- `v0.3.8`: Stability maintenance, export edge cases, and regression test coverage.
+- `v0.3.9`: Theme, font, reading width, and code theme settings once editor stability is proven.
+- `v0.4.0`: Signing, notarization, automatic updates, release checksums, and broader public release hardening.
 
 ## Icon
 

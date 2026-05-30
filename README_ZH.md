@@ -41,19 +41,18 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## 安装包与首次运行
 
-推送 `v0.3.6` 版本标签后，GitHub Release 会生成：
+推送 `v0.3.7` 版本标签后，GitHub Release 会生成：
 
 - Windows x64 的 `LumenMark_<version>_x64-setup.exe`（NSIS 用户级安装，包含 WebView2 离线安装器）。
 - macOS Apple Silicon 的 `LumenMark_<version>_aarch64.dmg`。
 
-`v0.3.6` 新增 HTML、PDF、PNG 直接导出，并集中修复编辑体验问题：菜单栏跟随语言切换，不再中英文双语混排；新建文档不再显示额外“未命名”标题；深色模式覆盖更完整；工作区隐藏不包含 Markdown 的文件夹；左侧长文件名支持横向滚动；代码块复制和自动换行按钮不再重叠；代码围栏联想支持上下键选择；代码块回车保留合理缩进；Shell 注释高亮更完整。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 使用系统 WebKit，因此 `.dmg` 体积明显小于 Windows 安装包是正常结果；安装和启动不需要下载额外运行时。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+`v0.3.7` 以稳定性修复为主：新增 Typora 风格上标/下标语法，恢复手动输入无序列表和有序列表的转换规则，HTML/PDF/PNG 导出改为基于只读预览 DOM，Mermaid 流程图会以渲染结果导出而不是代码块，代码块复制成功后会短暂显示成功状态。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 使用系统 WebKit，因此 `.dmg` 体积明显小于 Windows 安装包是正常结果；安装和启动不需要下载额外运行时。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
 
 ## 后续路线
 
-- `v0.3.7`：主题、字体、阅读宽度与代码主题设置。
-- `v0.3.8`：大纲固定、标题折叠和更强的大纲/编辑器同步。
-- `v0.3.9`：Mermaid 与数学公式模板，以及更友好的错误提示。
-- `v0.4.0`：签名、公证、自动更新与安装包校验。
+- `v0.3.8`：稳定性维护、导出边界问题修复与回归测试覆盖增强。
+- `v0.3.9`：在编辑器稳定性验证后，再推进主题、字体、阅读宽度与代码主题设置。
+- `v0.4.0`：签名、公证、自动更新、安装包校验与面向公开发行的质量加固。
 
 ## 图标
 

@@ -46,6 +46,14 @@ describe("MarkdownPreview", () => {
     await waitFor(() => expect(screen.getByLabelText("diagram")).toBeVisible());
   });
 
+  it("renders Typora-style superscript and subscript while preserving strikethrough", () => {
+    render(<MarkdownPreview source={"E = mc^2^ and H~2~O plus ~~removed~~"} />);
+
+    expect(document.querySelector("sup")?.textContent).toBe("2");
+    expect(document.querySelector("sub")?.textContent).toBe("2");
+    expect(document.querySelector("del")?.textContent).toBe("removed");
+  });
+
   it("loads relative images through a workspace-scoped resolver", async () => {
     render(
       <MarkdownPreview

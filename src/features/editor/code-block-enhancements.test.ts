@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { enhanceCodeBlockControls, syncIconButton } from "./code-block-enhancements";
 
 describe("code block enhancements", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("adds an independent wrap toggle to each code block", () => {
     document.body.innerHTML = `
       <div class="crepe-root">
@@ -31,10 +35,15 @@ describe("code block enhancements", () => {
     document.body.innerHTML = `
       <div class="crepe-root">
         <div class="milkdown-code-block">
+          <div class="cm-content"><div class="cm-line">echo ok</div></div>
           <button class="copy-button">Copy</button>
         </div>
       </div>
     `;
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
 
     enhanceCodeBlockControls(document.querySelector(".crepe-root") as HTMLElement, { wrapLabel: "Wrap code", copyLabel: "Copy" });
 
@@ -58,5 +67,36 @@ describe("code block enhancements", () => {
     expect(button.innerHTML).toBe(icon);
     expect(button).toHaveAttribute("aria-label", "Wrap code");
     expect(button).toHaveAttribute("title", "Wrap code");
+  });
+
+  it("shows a short success icon after the copy button reports success", async () => {
+    vi.useFakeTimers();
+    document.body.innerHTML = `
+      <div class="crepe-root">
+        <div class="milkdown-code-block">
+          <button class="copy-button">Copy</button>
+        </div>
+      </div>
+    `;
+
+    enhanceCodeBlockControls(document.querySelector(".crepe-root") as HTMLElement, {
+      wrapLabel: "Wrap code",
+      copyLabel: "Copy",
+      copiedLabel: "Copied",
+    });
+
+    const button = document.querySelector<HTMLButtonElement>(".copy-button");
+    expect(button?.textContent).not.toContain("✅");
+
+    button?.dispatchEvent(new Event("click", { bubbles: true }));
+    await Promise.resolve();
+    vi.advanceTimersByTime(0);
+
+    expect(button?.textContent).toContain("✅");
+
+    vi.advanceTimersByTime(2000);
+
+    expect(button?.textContent).not.toContain("✅");
+    expect(button).toHaveAttribute("aria-label", "Copy");
   });
 });

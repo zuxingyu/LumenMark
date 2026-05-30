@@ -8,6 +8,7 @@ import type { Components } from "react-markdown";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { codeLanguageLabel, messages, type Locale } from "../../i18n";
 import { isTauriRuntime } from "../../services/desktop";
+import { typoraInlineRemarkPlugin } from "../markdown/typora-inline";
 
 interface MarkdownPreviewProps {
   locale?: Locale;
@@ -165,7 +166,7 @@ export function MarkdownPreview({ locale = "en-US", source, imageResolver }: Mar
   return (
     <article className="markdown-preview">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
+        remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkMath, typoraInlineRemarkPlugin]}
         rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
         components={components}
       >

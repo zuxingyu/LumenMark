@@ -797,7 +797,8 @@ button.primary:hover:not(:disabled) {
   background: var(--page);
 }
 
-.export-capture-host .crepe-root {
+.export-capture-host .crepe-root,
+.export-capture-host .markdown-preview {
   min-height: auto;
   padding: 48px 64px;
 }

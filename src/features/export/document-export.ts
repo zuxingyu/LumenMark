@@ -53,10 +53,29 @@ export function collectExportStyles(): string {
     .join("\n");
 }
 
-export function cloneDocumentBody(source: HTMLElement): HTMLElement {
-  const clone = source.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll(".code-block-tools, .code-language-search, .preview-toggle-button").forEach((node) => node.remove());
-  return clone;
+export function createExportPreviewHost(): HTMLDivElement {
+  const host = document.createElement("div");
+  host.className = "export-capture-host";
+  document.body.append(host);
+  return host;
+}
+
+export async function waitForExportPreviewReady(
+  host: HTMLElement,
+  options: { timeoutMs?: number; intervalMs?: number } = {},
+): Promise<void> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const intervalMs = options.intervalMs ?? 50;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const preview = host.querySelector(".markdown-preview");
+    const loading = host.querySelector(".diagram-loading, .image-loading");
+    if (preview && !loading) return;
+    await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error("Timed out while waiting for export preview rendering.");
 }
 
 export function blobToBase64(blob: Blob): Promise<string> {
