@@ -40,6 +40,7 @@ import {
 } from "../features/editor/markdown-shortcuts";
 import { markdownPasteAsRichText } from "../features/editor/markdown-paste";
 import { renderMermaidPreview } from "../features/editor/mermaid-preview";
+import { mermaidThemeConfig } from "../features/editor/mermaid-theme";
 import { typoraInlineSyntax } from "../features/markdown/typora-inline";
 
 interface VisualMarkdownEditorProps {
@@ -123,7 +124,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
           renderPreview: (language, source, applyPreview) => {
             if (language.toLowerCase() !== "mermaid") return null;
             void import("mermaid").then(({ default: mermaid }) => {
-              mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "neutral" });
+              mermaid.initialize(mermaidThemeConfig());
               return renderMermaidPreview(source, (id, diagram) => mermaid.render(id, diagram));
             }).then((html) => applyPreview(html));
             return undefined;

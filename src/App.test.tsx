@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import type { DesktopApi } from "./services/desktop";
@@ -38,6 +38,12 @@ const api: DesktopApi = {
   setMenuLocale: async () => ({ success: true }),
 };
 
+function dispatchAppCommand(command: string) {
+  act(() => {
+    window.dispatchEvent(new CustomEvent("lumenmark:app-command", { detail: command }));
+  });
+}
+
 describe("LumenMark app shell", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -50,19 +56,20 @@ describe("LumenMark app shell", () => {
   it("starts in an untitled Chinese visual editing document and persists an English locale choice", async () => {
     const { unmount } = render(<App api={api} />);
     await waitFor(() => expect(screen.queryByRole("heading", { name: "未命名" })).not.toBeInTheDocument());
-    expect(screen.getAllByRole("button", { name: "打开文件夹" })[0]).toBeVisible();
+    expect(screen.queryByRole("button", { name: "打开文件夹" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "English" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "预览" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "English" }));
-    expect(screen.getAllByRole("button", { name: "Open Folder" })[0]).toBeVisible();
+    dispatchAppCommand("toggle-locale");
+    await waitFor(() => expect(localStorage.getItem("lumenmark.locale")).toBe("en-US"));
     unmount();
 
     render(<App api={api} />);
-    expect(screen.getAllByRole("button", { name: "Open Folder" })[0]).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Open Folder" })).not.toBeInTheDocument();
   });
 
   it("opens a workspace document directly in the visual editor", async () => {
     render(<App api={api} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    dispatchAppCommand("open-folder");
 
     await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
     fireEvent.click(screen.getByText("guide.md"));
@@ -72,7 +79,7 @@ describe("LumenMark app shell", () => {
 
   it("opens a single Markdown file without adding a recent workspace", async () => {
     render(<App api={api} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件" })[0]);
+    dispatchAppCommand("open-file");
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "solo.md" })).toBeVisible());
     expect(screen.queryByText("最近工作区")).not.toBeInTheDocument();
@@ -81,7 +88,7 @@ describe("LumenMark app shell", () => {
 
   it("persists opened folders and removes only their app association", async () => {
     render(<App api={api} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    dispatchAppCommand("open-folder");
     await waitFor(() => expect(screen.getByText("docs")).toBeVisible());
     expect(screen.getByText("最近工作区")).toBeVisible();
 
@@ -98,7 +105,7 @@ describe("LumenMark app shell", () => {
         : [{ name: "notes", relativePath: "notes", kind: "directory", childrenLoaded: false }],
     };
     render(<App api={folderApi} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    dispatchAppCommand("open-folder");
 
     await waitFor(() => expect(screen.getByText("notes")).toBeVisible());
     fireEvent.click(screen.getByText("notes"));
@@ -108,7 +115,7 @@ describe("LumenMark app shell", () => {
   it("saves changed content with Ctrl+S", async () => {
     const writeMarkdownFile = vi.fn().mockResolvedValue({ success: true });
     render(<App api={{ ...api, writeMarkdownFile }} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    dispatchAppCommand("open-folder");
     await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
     fireEvent.click(screen.getByText("guide.md"));
     await waitFor(() => expect(screen.getByRole("heading", { name: "guide.md" })).toBeVisible());
@@ -137,10 +144,11 @@ describe("LumenMark app shell", () => {
   it("asks before replacing a changed document with a new blank one", async () => {
     render(<App api={api} />);
     fireEvent.click(screen.getByText("修改文档"));
+    await waitFor(() => expect(screen.getByText("未保存的更改")).toBeVisible());
 
-    fireEvent.click(screen.getByRole("button", { name: "新建" }));
+    dispatchAppCommand("new-document");
 
-    expect(screen.getByRole("dialog", { name: "保存更改？" })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "保存更改？" })).toBeVisible());
   });
 
   it("shows an outline derived from the active document headings", async () => {
@@ -153,9 +161,10 @@ describe("LumenMark app shell", () => {
         content: "# Title\n\n## Details",
       }),
     }} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件" })[0]);
+    dispatchAppCommand("open-file");
 
-    await waitFor(() => expect(screen.getByText("文档大纲")).toBeVisible());
+    await waitFor(() => expect(screen.getByRole("tab", { name: "文档大纲" })).toBeVisible());
+    fireEvent.click(screen.getByRole("tab", { name: "文档大纲" }));
     expect(screen.getByRole("button", { name: "Title" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Details" })).toBeVisible();
   });
@@ -170,9 +179,10 @@ describe("LumenMark app shell", () => {
         content: "alpha alpha",
       }),
     }} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件" })[0]);
+    dispatchAppCommand("open-file");
     await waitFor(() => expect(screen.getByText("alpha alpha")).toBeVisible());
-    fireEvent.click(screen.getByRole("button", { name: "查找" }));
+    dispatchAppCommand("find");
+    await waitFor(() => expect(screen.getByLabelText("查找内容")).toBeVisible());
     fireEvent.change(screen.getByLabelText("查找内容"), { target: { value: "alpha" } });
     fireEvent.change(screen.getByLabelText("替换为"), { target: { value: "beta" } });
     fireEvent.click(screen.getByRole("button", { name: "全部替换" }));
@@ -194,7 +204,7 @@ describe("LumenMark app shell", () => {
       readMarkdownFile,
       searchWorkspace,
     }} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    dispatchAppCommand("open-folder");
     await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
 
     fireEvent.change(screen.getByLabelText("搜索工作区"), { target: { value: "Search" } });
@@ -214,7 +224,7 @@ describe("LumenMark app shell", () => {
       { kind: "content", relativePath: "guide.md", name: "guide.md", line: 7, excerpt: "sidebar match" },
     ]);
     render(<App api={{ ...api, readMarkdownFile, searchWorkspace }} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    dispatchAppCommand("open-folder");
     await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
 
     fireEvent.change(screen.getByLabelText("搜索工作区"), { target: { value: "guide" } });
@@ -226,13 +236,60 @@ describe("LumenMark app shell", () => {
     await waitFor(() => expect(readMarkdownFile).toHaveBeenCalledWith("/docs", "guide.md"));
   });
 
+  it("clears workspace search results when the query is cleared", async () => {
+    const searchWorkspace = vi.fn().mockResolvedValue([
+      { kind: "file", relativePath: "guide.md", name: "guide.md", line: null, excerpt: "guide.md" },
+    ]);
+    render(<App api={{ ...api, searchWorkspace }} />);
+    dispatchAppCommand("open-folder");
+    await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
+
+    fireEvent.change(screen.getByLabelText("搜索工作区"), { target: { value: "guide" } });
+    await screen.findByText("文件名匹配");
+    fireEvent.change(screen.getByLabelText("搜索工作区"), { target: { value: "" } });
+
+    await waitFor(() => expect(screen.queryByText("文件名匹配")).not.toBeInTheDocument());
+  });
+
+  it("switches workspace and outline as sidebar tabs instead of stacked sections", async () => {
+    render(<App api={{
+      ...api,
+      selectMarkdownFile: async () => ({
+        root: "/single",
+        relativePath: "outline.md",
+        name: "outline.md",
+        content: "# Title\n\n## Details",
+      }),
+    }} />);
+    dispatchAppCommand("open-file");
+    await waitFor(() => expect(screen.getByRole("tab", { name: "工作区" })).toBeVisible());
+
+    expect(screen.getByRole("tab", { name: "工作区" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("button", { name: "Title" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "文档大纲" }));
+
+    expect(screen.getByRole("tab", { name: "文档大纲" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: "Title" })).toBeVisible();
+    expect(screen.queryByLabelText("搜索工作区")).not.toBeInTheDocument();
+  });
+
+  it("runs export commands from the native menu command bridge", async () => {
+    const saveExportTextFile = vi.fn().mockResolvedValue("guide.html");
+    render(<App api={{ ...api, saveExportTextFile }} />);
+
+    dispatchAppCommand("export-html");
+
+    await waitFor(() => expect(saveExportTextFile).toHaveBeenCalledWith("未命名.html", expect.stringContaining("<!doctype html>")));
+  });
+
   it("opens file-name workspace search matches without showing a null line number", async () => {
     const readMarkdownFile = vi.fn().mockResolvedValue({ relativePath: "guide.md", content: "# File Match" });
     const searchWorkspace = vi.fn().mockResolvedValue([
       { kind: "file", relativePath: "guide.md", name: "guide.md", line: null, excerpt: "guide.md" },
     ]);
     render(<App api={{ ...api, readMarkdownFile, searchWorkspace }} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "打开文件夹" })[0]);
+    dispatchAppCommand("open-folder");
     await waitFor(() => expect(screen.getByText("guide.md")).toBeVisible());
 
     fireEvent.change(screen.getByLabelText("搜索工作区"), { target: { value: "guide" } });

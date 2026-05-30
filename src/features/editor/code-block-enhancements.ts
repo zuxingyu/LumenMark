@@ -6,7 +6,7 @@ interface CodeBlockControlLabels {
 
 const copyIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
 const wrapIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h13a4 4 0 0 1 0 8H7"></path><path d="m10 11-3 3 3 3"></path><path d="M3 18h12"></path></svg>`;
-const copiedIcon = `<span aria-hidden="true">✅</span>`;
+const copiedIcon = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>`;
 
 export function getNextCodeLineIndent(line: string): string {
   const currentIndent = line.match(/^[\t ]*/)?.[0] ?? "";
@@ -40,6 +40,43 @@ function extractCodeText(block: HTMLElement): string {
   return clone.querySelector<HTMLElement>("pre, code")?.textContent ?? clone.textContent ?? "";
 }
 
+function isMermaidBlock(block: HTMLElement): boolean {
+  const declaredLanguage = [
+    block.dataset.language,
+    block.getAttribute("data-language"),
+    block.querySelector<HTMLElement>("[data-language]")?.dataset.language,
+    block.querySelector<HTMLElement>(".language-button, .language-label")?.textContent,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return declaredLanguage.includes("mermaid") || Boolean(block.querySelector(".mermaid-preview, .mermaid-diagram"));
+}
+
+function focusMermaidSource(block: HTMLElement) {
+  block.classList.add("mermaid-source-visible");
+  const focusTarget =
+    block.querySelector<HTMLElement>(".cm-content")
+    ?? block.querySelector<HTMLElement>(".cm-editor, textarea, pre, code");
+  if (!focusTarget) return;
+  if (!focusTarget.hasAttribute("tabindex") && focusTarget instanceof HTMLElement) {
+    focusTarget.tabIndex = -1;
+  }
+  focusTarget.focus();
+}
+
+function bindMermaidPreviewEditing(block: HTMLElement) {
+  if (!isMermaidBlock(block) || block.dataset.mermaidEditingBound === "true") return;
+  block.dataset.mermaidEditingBound = "true";
+  block.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest(".mermaid-preview, .mermaid-diagram")) return;
+    focusMermaidSource(block);
+  });
+  block.addEventListener("focusout", (event) => {
+    const nextTarget = event.relatedTarget as Node | null;
+    if (nextTarget && block.contains(nextTarget)) return;
+    block.classList.remove("mermaid-source-visible");
+  });
+}
+
 export function enhanceCodeBlockControls(root: HTMLElement, labels: CodeBlockControlLabels): () => void {
   const timers = new WeakMap<HTMLButtonElement, number>();
 
@@ -58,6 +95,7 @@ export function enhanceCodeBlockControls(root: HTMLElement, labels: CodeBlockCon
 
   const apply = () => {
     root.querySelectorAll<HTMLElement>(".milkdown-code-block").forEach((block) => {
+      bindMermaidPreviewEditing(block);
       let toolbar = block.querySelector<HTMLElement>(".code-block-tools");
       if (!toolbar) {
         toolbar = document.createElement("div");

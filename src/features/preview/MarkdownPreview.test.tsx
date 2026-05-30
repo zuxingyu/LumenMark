@@ -54,6 +54,13 @@ describe("MarkdownPreview", () => {
     expect(document.querySelector("del")?.textContent).toBe("removed");
   });
 
+  it("renders HTML underline tags while preserving safe Markdown output", () => {
+    render(<MarkdownPreview source={"This is <u>underlined</u> and H~2~O"} />);
+
+    expect(document.querySelector("u")?.textContent).toBe("underlined");
+    expect(document.querySelector("sub")?.textContent).toBe("2");
+  });
+
   it("loads relative images through a workspace-scoped resolver", async () => {
     render(
       <MarkdownPreview

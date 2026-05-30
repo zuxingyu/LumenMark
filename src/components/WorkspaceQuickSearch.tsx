@@ -18,7 +18,10 @@ export function WorkspaceQuickSearch({ labels, disabled, results, onSearch, onOp
   }), [results]);
 
   useEffect(() => {
-    if (disabled || !query.trim()) return;
+    if (disabled || !query.trim()) {
+      onSearch("");
+      return;
+    }
     const timer = window.setTimeout(() => onSearch(query), 250);
     return () => window.clearTimeout(timer);
   }, [disabled, onSearch, query]);

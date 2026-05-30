@@ -9,6 +9,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { codeLanguageLabel, messages, type Locale } from "../../i18n";
 import { isTauriRuntime } from "../../services/desktop";
 import { typoraInlineRemarkPlugin } from "../markdown/typora-inline";
+import { mermaidThemeConfig } from "../editor/mermaid-theme";
 
 interface MarkdownPreviewProps {
   locale?: Locale;
@@ -27,7 +28,7 @@ function MermaidBlock({ locale, source }: { locale: Locale; source: string }) {
     async function renderDiagram() {
       try {
         const { default: mermaid } = await import("mermaid");
-        mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "neutral" });
+        mermaid.initialize(mermaidThemeConfig());
         const output = await mermaid.render(`lumenmark-${generatedId}`, source);
         if (active) setSvg(output.svg);
       } catch {

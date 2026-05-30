@@ -75,6 +75,7 @@ export function App({ api: providedApi }: AppProps) {
   const [searchRevealText, setSearchRevealText] = useState<string>();
   const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true");
+  const [sidebarPanel, setSidebarPanel] = useState<"workspace" | "outline">("workspace");
   const [pendingDraft, setPendingDraft] = useState<RecoveryDraft | null>(() => loadDraft());
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [status, setStatus] = useState<string>(() => messages[initialLocale()].ready);
@@ -172,6 +173,7 @@ export function App({ api: providedApi }: AppProps) {
   }, [labels.operationFailed]);
   const attemptRef = useRef(attempt);
   attemptRef.current = attempt;
+  const appCommandHandler = useRef<(command: string) => void>(() => undefined);
 
   const saveDocument = useCallback(async (): Promise<boolean> => {
     try {
@@ -239,6 +241,7 @@ export function App({ api: providedApi }: AppProps) {
   function editOpenedDocument(selected: OpenedDocument) {
     setWorkspace(null);
     setEntries([]);
+    setSearchResults([]);
     replaceSession(createOpenedSession("single-file", selected.root, selected.relativePath, selected.content));
     setStatus(localeRef.current === "zh-CN" ? `正在编辑 ${selected.name}` : `Editing ${selected.name}`);
   }
@@ -329,6 +332,8 @@ export function App({ api: providedApi }: AppProps) {
       const nextEntries = await api.listWorkspaceEntries(selected.root);
       setWorkspace(selected);
       setEntries(nextEntries);
+      setSearchResults([]);
+      setSidebarPanel("workspace");
       replaceSession(createUntitledSession(labels.untitled));
       setStatus(locale === "zh-CN" ? `已打开 ${selected.name}` : `Opened ${selected.name}`);
     };
@@ -424,8 +429,7 @@ export function App({ api: providedApi }: AppProps) {
   }
 
   const searchWorkspace = useCallback((query: string) => {
-    if (!workspace) return;
-    if (!query.trim()) {
+    if (!workspace || !query.trim()) {
       setSearchResults([]);
       return;
     }
@@ -472,23 +476,43 @@ export function App({ api: providedApi }: AppProps) {
     window.addEventListener("pointerup", stop);
   }
 
+  appCommandHandler.current = (command: string) => {
+    if (command === "new-document") createDocument();
+    else if (command === "open-file") openFile();
+    else if (command === "open-folder") openWorkspace();
+    else if (command === "save-document") void saveDocument();
+    else if (command === "find") setFindVisible(true);
+    else if (command === "export-html") void attempt(() => exportDocument("html"));
+    else if (command === "export-pdf") void attempt(() => exportDocument("pdf"));
+    else if (command === "export-png") void attempt(() => exportDocument("png"));
+    else if (command === "toggle-locale") changeLocale();
+    else if (command === "show-workspace-panel") setSidebarPanel("workspace");
+    else if (command === "show-outline-panel") setSidebarPanel("outline");
+  };
+
+  useEffect(() => {
+    const runWindowCommand = (event: Event) => {
+      const command = (event as CustomEvent<string>).detail;
+      if (command) appCommandHandler.current(command);
+    };
+    window.addEventListener("lumenmark:app-command", runWindowCommand);
+    let unlistenAppMenu: (() => void) | undefined;
+    if (isTauriRuntime()) {
+      void import("@tauri-apps/api/event")
+        .then(({ listen }) => listen<string>("app-command", (event) => appCommandHandler.current(event.payload)))
+        .then((unlisten) => {
+          unlistenAppMenu = unlisten;
+        });
+    }
+    return () => {
+      window.removeEventListener("lumenmark:app-command", runWindowCommand);
+      unlistenAppMenu?.();
+    };
+  }, []);
+
   return (
     <div className="app-shell">
-      <Toolbar
-        labels={labels}
-        hasWorkspace={Boolean(workspace)}
-        hasDocument
-        dirty={session.isDirty}
-        onOpenFile={openFile}
-        onOpenFolder={openWorkspace}
-        onNew={createDocument}
-        onSave={() => void saveDocument()}
-        onExportHtml={() => void attempt(() => exportDocument("html"))}
-        onExportPdf={() => void attempt(() => exportDocument("pdf"))}
-        onExportPng={() => void attempt(() => exportDocument("png"))}
-        onFind={() => setFindVisible(true)}
-        onToggleLocale={changeLocale}
-      />
+      <Toolbar labels={labels} />
       <div
         className={sidebarCollapsed ? "workspace-layout sidebar-collapsed" : "workspace-layout"}
         style={{ "--sidebar-width": `${sidebarCollapsed ? COLLAPSED_SIDEBAR_WIDTH : sidebarWidth}px` } as CSSProperties}
@@ -502,12 +526,14 @@ export function App({ api: providedApi }: AppProps) {
           activePath={workspace ? session.path ?? undefined : undefined}
           collapsed={sidebarCollapsed}
           searchResults={searchResults}
+          activePanel={sidebarPanel}
           onSelect={selectEntry}
           onSelectWorkspace={openRecentWorkspace}
           onRemoveWorkspace={removeWorkspace}
           onRename={renameDocument}
           onOutlineSelect={(item) => window.dispatchEvent(new CustomEvent("lumenmark:outline", { detail: item.id }))}
           onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
+          onPanelChange={setSidebarPanel}
           onSearch={searchWorkspace}
           onOpenSearchResult={openSearchResult}
         />

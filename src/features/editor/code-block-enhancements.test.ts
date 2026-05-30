@@ -92,11 +92,41 @@ describe("code block enhancements", () => {
     await Promise.resolve();
     vi.advanceTimersByTime(0);
 
-    expect(button?.textContent).toContain("✅");
+    expect(button?.textContent).not.toContain("✅");
+    expect(button?.querySelector("svg")).not.toBeNull();
+    expect(button?.innerHTML).toContain("path");
 
     vi.advanceTimersByTime(2000);
 
     expect(button?.textContent).not.toContain("✅");
     expect(button).toHaveAttribute("aria-label", "Copy");
+  });
+
+  it("reveals Mermaid source when the rendered preview is clicked and hides it on blur", () => {
+    document.body.innerHTML = `
+      <div class="crepe-root">
+        <div class="milkdown-code-block" data-language="mermaid">
+          <div class="cm-editor">
+            <div class="cm-content" contenteditable="true"><div class="cm-line">graph TD; A-->B</div></div>
+          </div>
+          <div class="mermaid-preview"><svg aria-label="diagram"></svg></div>
+        </div>
+      </div>
+    `;
+
+    enhanceCodeBlockControls(document.querySelector(".crepe-root") as HTMLElement, { wrapLabel: "Wrap code", copyLabel: "Copy" });
+    const block = document.querySelector<HTMLElement>(".milkdown-code-block");
+    const preview = document.querySelector<HTMLElement>(".mermaid-preview");
+
+    expect(block).not.toHaveClass("mermaid-source-visible");
+
+    preview?.click();
+
+    expect(block).toHaveClass("mermaid-source-visible");
+    expect(block?.querySelector(".cm-content")).toHaveFocus();
+
+    block?.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: document.body }));
+
+    expect(block).not.toHaveClass("mermaid-source-visible");
   });
 });

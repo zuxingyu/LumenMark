@@ -115,12 +115,34 @@ const FORMAT_MENU_ITEMS: &[(&str, &str, MenuText, Option<&str>)] = &[
     ("format-strikethrough", "strikethrough", MenuText { zh: "删除线", en: "Strikethrough" }, Some("CmdOrCtrl+Shift+X")),
     ("format-superscript", "superscript", MenuText { zh: "上标", en: "Superscript" }, None),
     ("format-subscript", "subscript", MenuText { zh: "下标", en: "Subscript" }, None),
+    ("format-underline", "underline", MenuText { zh: "下划线", en: "Underline" }, Some("CmdOrCtrl+U")),
     ("format-inline-code", "inline-code", MenuText { zh: "行内代码", en: "Inline Code" }, Some("CmdOrCtrl+Shift+C")),
     ("format-link", "link", MenuText { zh: "链接", en: "Link" }, Some("CmdOrCtrl+K")),
 ];
 
+const APP_MENU_ITEMS: &[(&str, &str, MenuText, Option<&str>)] = &[
+    ("app-new-document", "new-document", MenuText { zh: "新建", en: "New" }, Some("CmdOrCtrl+N")),
+    ("app-open-file", "open-file", MenuText { zh: "打开文件", en: "Open File" }, Some("CmdOrCtrl+O")),
+    ("app-open-folder", "open-folder", MenuText { zh: "打开文件夹", en: "Open Folder" }, Some("CmdOrCtrl+Shift+O")),
+    ("app-save-document", "save-document", MenuText { zh: "保存", en: "Save" }, Some("CmdOrCtrl+S")),
+    ("app-export-html", "export-html", MenuText { zh: "导出 HTML", en: "Export HTML" }, None),
+    ("app-export-pdf", "export-pdf", MenuText { zh: "导出 PDF", en: "Export PDF" }, None),
+    ("app-export-png", "export-png", MenuText { zh: "导出 PNG", en: "Export PNG" }, None),
+    ("app-find", "find", MenuText { zh: "查找", en: "Find" }, Some("CmdOrCtrl+F")),
+    ("app-show-workspace-panel", "show-workspace-panel", MenuText { zh: "工作区", en: "Workspace" }, None),
+    ("app-show-outline-panel", "show-outline-panel", MenuText { zh: "大纲", en: "Outline" }, None),
+    ("app-toggle-locale", "toggle-locale", MenuText { zh: "切换到 English", en: "Switch to 中文" }, None),
+];
+
 fn format_command_from_menu_id(id: &str) -> Option<&'static str> {
     FORMAT_MENU_ITEMS
+        .iter()
+        .find(|(menu_id, _, _, _)| *menu_id == id)
+        .map(|(_, command, _, _)| *command)
+}
+
+fn app_command_from_menu_id(id: &str) -> Option<&'static str> {
+    APP_MENU_ITEMS
         .iter()
         .find(|(menu_id, _, _, _)| *menu_id == id)
         .map(|(_, command, _, _)| *command)
@@ -132,6 +154,8 @@ fn localized_menu_label(locale: MenuLocale, key: &str) -> &'static str {
         (MenuLocale::En, "file") => "File",
         (MenuLocale::Zh, "edit") => "编辑",
         (MenuLocale::En, "edit") => "Edit",
+        (MenuLocale::Zh, "export") => "导出",
+        (MenuLocale::En, "export") => "Export",
         (MenuLocale::Zh, "format") => "格式",
         (MenuLocale::En, "format") => "Format",
         (MenuLocale::Zh, "view") => "显示",
@@ -145,6 +169,10 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
     locale: MenuLocale,
 ) -> tauri::Result<Menu<R>> {
     let format_items = FORMAT_MENU_ITEMS
+        .iter()
+        .map(|(id, _, label, accelerator)| MenuItem::with_id(app, *id, label.get(locale), true, *accelerator))
+        .collect::<tauri::Result<Vec<_>>>()?;
+    let app_items = APP_MENU_ITEMS
         .iter()
         .map(|(id, _, label, accelerator)| MenuItem::with_id(app, *id, label.get(locale), true, *accelerator))
         .collect::<tauri::Result<Vec<_>>>()?;
@@ -173,9 +201,26 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                 localized_menu_label(locale, "file"),
                 true,
                 &[
+                    &app_items[0],
+                    &PredefinedMenuItem::separator(app)?,
+                    &app_items[1],
+                    &app_items[2],
+                    &PredefinedMenuItem::separator(app)?,
+                    &app_items[3],
+                    &PredefinedMenuItem::separator(app)?,
                     &PredefinedMenuItem::close_window(app, None)?,
                     #[cfg(not(target_os = "macos"))]
                     &PredefinedMenuItem::quit(app, None)?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
+                localized_menu_label(locale, "export"),
+                true,
+                &[
+                    &app_items[4],
+                    &app_items[5],
+                    &app_items[6],
                 ],
             )?,
             &Submenu::with_items(
@@ -185,6 +230,8 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                 &[
                     &PredefinedMenuItem::undo(app, None)?,
                     &PredefinedMenuItem::redo(app, None)?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &app_items[7],
                     &PredefinedMenuItem::separator(app)?,
                     &PredefinedMenuItem::cut(app, None)?,
                     &PredefinedMenuItem::copy(app, None)?,
@@ -219,14 +266,23 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                     &format_items[16],
                     &format_items[17],
                     &format_items[18],
+                    &format_items[19],
                 ],
             )?,
-            #[cfg(target_os = "macos")]
             &Submenu::with_items(
                 app,
                 localized_menu_label(locale, "view"),
                 true,
-                &[&PredefinedMenuItem::fullscreen(app, None)?],
+                &[
+                    &app_items[8],
+                    &app_items[9],
+                    &PredefinedMenuItem::separator(app)?,
+                    &app_items[10],
+                    #[cfg(target_os = "macos")]
+                    &PredefinedMenuItem::separator(app)?,
+                    #[cfg(target_os = "macos")]
+                    &PredefinedMenuItem::fullscreen(app, None)?,
+                ],
             )?,
         ],
     )
@@ -717,6 +773,8 @@ pub fn run() {
         .on_menu_event(|app, event| {
             if let Some(command) = format_command_from_menu_id(event.id().as_ref()) {
                 let _ = app.emit("format-command", command);
+            } else if let Some(command) = app_command_from_menu_id(event.id().as_ref()) {
+                let _ = app.emit("app-command", command);
             }
         })
         .plugin(tauri_plugin_opener::init())
@@ -971,6 +1029,7 @@ mod tests {
         assert_eq!(super::format_command_from_menu_id("format-heading-6"), Some("heading-6"));
         assert_eq!(super::format_command_from_menu_id("format-superscript"), Some("superscript"));
         assert_eq!(super::format_command_from_menu_id("format-subscript"), Some("subscript"));
+        assert_eq!(super::format_command_from_menu_id("format-underline"), Some("underline"));
         assert_eq!(super::format_command_from_menu_id("format-link"), Some("link"));
         assert_eq!(super::format_command_from_menu_id("not-format-link"), None);
         let source = include_str!("lib.rs");
@@ -983,5 +1042,11 @@ mod tests {
         }));
         assert_eq!(super::localized_menu_label(super::MenuLocale::Zh, "file"), "文件");
         assert_eq!(super::localized_menu_label(super::MenuLocale::En, "file"), "File");
+        assert_eq!(super::localized_menu_label(super::MenuLocale::Zh, "export"), "导出");
+        assert_eq!(super::localized_menu_label(super::MenuLocale::En, "export"), "Export");
+        assert_eq!(super::app_command_from_menu_id("app-open-file"), Some("open-file"));
+        assert_eq!(super::app_command_from_menu_id("app-open-folder"), Some("open-folder"));
+        assert_eq!(super::app_command_from_menu_id("app-export-pdf"), Some("export-pdf"));
+        assert_eq!(super::app_command_from_menu_id("app-show-outline-panel"), Some("show-outline-panel"));
     }
 }

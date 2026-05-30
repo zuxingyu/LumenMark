@@ -16,7 +16,7 @@ import {
 } from "@milkdown/kit/preset/commonmark";
 import { toggleStrikethroughCommand } from "@milkdown/kit/preset/gfm";
 import { toggleLinkCommand } from "@milkdown/kit/component/link-tooltip";
-import { toggleSubscriptCommand, toggleSuperscriptCommand } from "../markdown/typora-inline";
+import { toggleSubscriptCommand, toggleSuperscriptCommand, toggleUnderlineCommand } from "../markdown/typora-inline";
 
 export type FormatCommandKind = "block" | "inline";
 
@@ -43,6 +43,7 @@ export const FORMAT_COMMANDS: FormatCommandDefinition[] = [
   { id: "strikethrough", kind: "inline" },
   { id: "superscript", kind: "inline" },
   { id: "subscript", kind: "inline" },
+  { id: "underline", kind: "inline" },
   { id: "inline-code", kind: "inline" },
   { id: "link", kind: "inline" },
 ];
@@ -114,6 +115,10 @@ export function runFormatCommand(editor: Editor, commandId: string): boolean {
     }
     if (commandId === "subscript") {
       commands.call(toggleSubscriptCommand.key);
+      return true;
+    }
+    if (commandId === "underline") {
+      commands.call(toggleUnderlineCommand.key);
       return true;
     }
     if (commandId === "inline-code") {

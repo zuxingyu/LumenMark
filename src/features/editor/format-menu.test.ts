@@ -21,11 +21,13 @@ describe("system format menu command map", () => {
       "strikethrough",
       "superscript",
       "subscript",
+      "underline",
       "inline-code",
       "link",
     ]);
     expect(FORMAT_COMMANDS.find((command) => command.id === "heading-6")?.kind).toBe("block");
     expect(FORMAT_COMMANDS.find((command) => command.id === "strong")?.kind).toBe("inline");
     expect(FORMAT_COMMANDS.find((command) => command.id === "superscript")?.kind).toBe("inline");
+    expect(FORMAT_COMMANDS.find((command) => command.id === "underline")?.kind).toBe("inline");
   });
 });

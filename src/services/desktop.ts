@@ -119,15 +119,32 @@ export function createDemoApi(): DesktopApi {
       entry.relativePath = to;
       return entry;
     },
-    searchWorkspace: async (_root, query) => documents
-      .filter(() => source.toLowerCase().includes(query.toLowerCase()))
-      .map((document) => ({
-        kind: "content" as const,
-        relativePath: document.relativePath,
-        name: document.name,
-        line: 1,
-        excerpt: source.split("\n").find((line) => line.toLowerCase().includes(query.toLowerCase())) ?? source,
-      })),
+    searchWorkspace: async (_root, query) => {
+      const normalized = query.toLowerCase();
+      const contentLine = source.split("\n").find((line) => line.toLowerCase().includes(normalized));
+      return documents.flatMap((document) => {
+        const results = [];
+        if (document.name.toLowerCase().includes(normalized) || document.relativePath.toLowerCase().includes(normalized)) {
+          results.push({
+            kind: "file" as const,
+            relativePath: document.relativePath,
+            name: document.name,
+            line: null,
+            excerpt: document.relativePath,
+          });
+        }
+        if (contentLine) {
+          results.push({
+            kind: "content" as const,
+            relativePath: document.relativePath,
+            name: document.name,
+            line: 1,
+            excerpt: contentLine,
+          });
+        }
+        return results;
+      });
+    },
     saveExportTextFile: async (defaultName) => defaultName,
     saveExportBinaryFile: async (defaultName) => defaultName,
     setMenuLocale: async () => ({ success: true }),

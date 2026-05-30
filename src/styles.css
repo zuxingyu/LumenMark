@@ -165,32 +165,6 @@ button.primary:hover:not(:disabled) {
   border-radius: 8px;
 }
 
-.toolbar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.toolbar-actions button {
-  height: 38px;
-  padding: 0 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
-
-.toolbar-actions svg {
-  width: 17px;
-  height: 17px;
-}
-
-.toolbar-actions button.selected {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
 .workspace-layout {
   --sidebar-width: 264px;
   min-height: 0;
@@ -291,6 +265,37 @@ button.primary:hover:not(:disabled) {
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
+}
+
+.sidebar-tabs {
+  margin: 10px 6px 12px;
+  padding: 3px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.sidebar-tabs button {
+  height: 29px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+}
+
+.sidebar-tabs button.active {
+  color: var(--text);
+  background: var(--page);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.sidebar-panel {
+  min-width: max-content;
 }
 
 .recent-workspace {
@@ -739,6 +744,17 @@ button.primary:hover:not(:disabled) {
 
 .crepe-root .milkdown-code-block.selected .codemirror-host.hidden {
   display: block !important;
+}
+
+.crepe-root .milkdown-code-block.mermaid-source-visible .codemirror-host.hidden,
+.crepe-root .milkdown-code-block.mermaid-source-visible .cm-editor,
+.crepe-root .milkdown-code-block.mermaid-source-visible .cm-content {
+  display: block !important;
+}
+
+.crepe-root .milkdown-code-block.mermaid-source-visible .preview-panel,
+.crepe-root .milkdown-code-block.mermaid-source-visible .mermaid-preview {
+  margin-top: 12px;
 }
 
 .crepe-root .milkdown-code-block.selected .preview-panel {

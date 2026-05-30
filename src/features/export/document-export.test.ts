@@ -1,5 +1,18 @@
-import { describe, expect, it } from "vitest";
-import { buildStandaloneHtml, exportFileName, waitForExportPreviewReady, type ExportFormat } from "./document-export";
+import html2canvas from "html2canvas";
+import { describe, expect, it, vi } from "vitest";
+import {
+  buildStandaloneHtml,
+  exportFileName,
+  renderElementToPngBase64,
+  waitForExportPreviewReady,
+  type ExportFormat,
+} from "./document-export";
+
+vi.mock("html2canvas", () => ({
+  default: vi.fn().mockResolvedValue({
+    toDataURL: () => "data:image/png;base64,c2FmZQ==",
+  }),
+}));
 
 describe("document export", () => {
   it("builds standalone HTML from rendered document markup", () => {
@@ -36,5 +49,17 @@ describe("document export", () => {
     await expect(ready).resolves.toBeUndefined();
     expect(host.querySelector("svg")).not.toBeNull();
     host.remove();
+  });
+
+  it("uses a legacy-safe background color for html2canvas export capture", async () => {
+    const element = document.createElement("article");
+    element.className = "markdown-preview";
+    document.documentElement.style.setProperty("--page", "color(display-p3 1 1 1)");
+
+    await renderElementToPngBase64(element);
+
+    expect(html2canvas).toHaveBeenCalledWith(element, expect.objectContaining({
+      backgroundColor: "#ffffff",
+    }));
   });
 });

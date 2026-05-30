@@ -12,12 +12,13 @@ type MarkdownNode = {
 
 type InlinePart =
   | { type: "text"; value: string }
-  | { type: "superscript" | "subscript"; value: string };
+  | { type: "superscript" | "subscript" | "underline"; value: string };
 
 const SKIP_TYPES = new Set(["inlineCode", "code", "html", "math", "inlineMath"]);
 
 export const superscriptAttr = $markAttr("superscript");
 export const subscriptAttr = $markAttr("subscript");
+export const underlineAttr = $markAttr("underline");
 
 export const superscriptSchema = $markSchema("superscript", (ctx) => ({
   parseDOM: [{ tag: "sup" }],
@@ -59,12 +60,36 @@ export const subscriptSchema = $markSchema("subscript", (ctx) => ({
   },
 }));
 
+export const underlineSchema = $markSchema("underline", (ctx) => ({
+  parseDOM: [{ tag: "u" }],
+  toDOM: (mark) => ["u", ctx.get(underlineAttr.key)(mark)],
+  parseMarkdown: {
+    match: (node) => node.type === "underline",
+    runner: (state, node, markType) => {
+      state.openMark(markType);
+      state.next(node.children);
+      state.closeMark(markType);
+    },
+  },
+  toMarkdown: {
+    match: (mark) => mark.type.name === "underline",
+    runner: (state, _mark, node) => {
+      state.addNode("html", undefined, `<u>${node.text ?? ""}</u>`);
+      return true;
+    },
+  },
+}));
+
 export const toggleSuperscriptCommand = $command("ToggleSuperscript", (ctx) => () =>
   toggleMark(superscriptSchema.type(ctx)),
 );
 
 export const toggleSubscriptCommand = $command("ToggleSubscript", (ctx) => () =>
   toggleMark(subscriptSchema.type(ctx)),
+);
+
+export const toggleUnderlineCommand = $command("ToggleUnderline", (ctx) => () =>
+  toggleMark(underlineSchema.type(ctx)),
 );
 
 export const superscriptInputRule = $inputRule((ctx) =>
@@ -109,21 +134,51 @@ export function parseTyporaInlineText(value: string): InlinePart[] {
 
 function partToNode(part: InlinePart): MarkdownNode {
   if (part.type === "text") return { type: "text", value: part.value };
+  const tagName = part.type === "superscript" ? "sup" : part.type === "subscript" ? "sub" : "u";
   return {
     type: part.type,
-    data: { hName: part.type === "superscript" ? "sup" : "sub" },
+    data: { hName: tagName },
     children: [{ type: "text", value: part.value }],
   };
+}
+
+function underlineNodeFromHtml(value: string): MarkdownNode | null {
+  const match = /^<u>([^<]+)<\/u>$/i.exec(value.trim());
+  if (!match) return null;
+  return partToNode({ type: "underline", value: match[1] });
 }
 
 export function transformTyporaInlineSyntax(tree: MarkdownNode): MarkdownNode {
   function visit(node: MarkdownNode) {
     if (!node.children || SKIP_TYPES.has(node.type)) return;
     const next: MarkdownNode[] = [];
-    for (const child of node.children) {
+    for (let childIndex = 0; childIndex < node.children.length; childIndex += 1) {
+      const child = node.children[childIndex];
       if (child.type === "text" && child.value) {
         const parts = parseTyporaInlineText(child.value);
         next.push(...parts.map(partToNode));
+      } else if (child.type === "html" && child.value) {
+        if (/^<u>$/i.test(child.value.trim())) {
+          const content: string[] = [];
+          let endIndex = -1;
+          for (let scan = childIndex + 1; scan < node.children.length; scan += 1) {
+            const candidate = node.children[scan];
+            if (candidate.type === "html" && /^<\/u>$/i.test(candidate.value?.trim() ?? "")) {
+              endIndex = scan;
+              break;
+            }
+            if (candidate.type !== "text" || !candidate.value) {
+              break;
+            }
+            content.push(candidate.value);
+          }
+          if (endIndex > childIndex && content.length) {
+            next.push(partToNode({ type: "underline", value: content.join("") }));
+            childIndex = endIndex;
+            continue;
+          }
+        }
+        next.push(underlineNodeFromHtml(child.value) ?? child);
       } else {
         visit(child);
         next.push(child);
@@ -145,10 +200,13 @@ export function typoraInlineSyntax(editor: Editor): void {
     .use(typoraInlineRemark)
     .use(superscriptAttr)
     .use(subscriptAttr)
+    .use(underlineAttr)
     .use(superscriptSchema)
     .use(subscriptSchema)
+    .use(underlineSchema)
     .use(toggleSuperscriptCommand)
     .use(toggleSubscriptCommand)
+    .use(toggleUnderlineCommand)
     .use(superscriptInputRule)
     .use(subscriptInputRule);
 }

@@ -53,6 +53,42 @@ export function collectExportStyles(): string {
     .join("\n");
 }
 
+const UNSUPPORTED_CANVAS_COLOR = /\b(?:color|color-mix|lab|lch|oklab|oklch)\(/i;
+
+function safeColor(value: string | null | undefined, fallback: string): string {
+  const color = value?.trim();
+  if (!color || color.startsWith("var(") || UNSUPPORTED_CANVAS_COLOR.test(color)) return fallback;
+  return color;
+}
+
+function safeCanvasBackground(): string {
+  return safeColor(getComputedStyle(document.documentElement).getPropertyValue("--page"), "#ffffff");
+}
+
+function applyCanvasSafeColors(source: Element, clone: Element) {
+  if (!(source instanceof HTMLElement) || !(clone instanceof HTMLElement)) return;
+  const computed = getComputedStyle(source);
+  clone.style.color = safeColor(computed.color, "#111827");
+  clone.style.backgroundColor = safeColor(computed.backgroundColor, "transparent");
+  clone.style.borderTopColor = safeColor(computed.borderTopColor, "#d1d5db");
+  clone.style.borderRightColor = safeColor(computed.borderRightColor, "#d1d5db");
+  clone.style.borderBottomColor = safeColor(computed.borderBottomColor, "#d1d5db");
+  clone.style.borderLeftColor = safeColor(computed.borderLeftColor, "#d1d5db");
+  clone.style.outlineColor = safeColor(computed.outlineColor, "#60a5fa");
+  clone.style.textDecorationColor = safeColor(computed.textDecorationColor, "currentColor");
+}
+
+function makeCanvasCloneSafe(sourceRoot: HTMLElement, clonedDocument: Document) {
+  const clonedRoot = clonedDocument.body.querySelector<HTMLElement>(".markdown-preview");
+  if (!clonedRoot) return;
+  const sourceElements = [sourceRoot, ...Array.from(sourceRoot.querySelectorAll("*"))];
+  const cloneElements = [clonedRoot, ...Array.from(clonedRoot.querySelectorAll("*"))];
+  sourceElements.forEach((source, index) => {
+    const clone = cloneElements[index];
+    if (clone) applyCanvasSafeColors(source, clone);
+  });
+}
+
 export function createExportPreviewHost(): HTMLDivElement {
   const host = document.createElement("div");
   host.className = "export-capture-host";
@@ -89,7 +125,8 @@ export function blobToBase64(blob: Blob): Promise<string> {
 
 export async function renderElementToPngBase64(element: HTMLElement): Promise<string> {
   const canvas = await html2canvas(element, {
-    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--page").trim() || "#ffffff",
+    backgroundColor: safeCanvasBackground(),
+    onclone: (clonedDocument) => makeCanvasCloneSafe(element, clonedDocument),
     scale: Math.min(2, window.devicePixelRatio || 1),
     useCORS: true,
   });
@@ -98,7 +135,8 @@ export async function renderElementToPngBase64(element: HTMLElement): Promise<st
 
 export async function renderElementToPdfBase64(element: HTMLElement): Promise<string> {
   const canvas = await html2canvas(element, {
-    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--page").trim() || "#ffffff",
+    backgroundColor: safeCanvasBackground(),
+    onclone: (clonedDocument) => makeCanvasCloneSafe(element, clonedDocument),
     scale: Math.min(2, window.devicePixelRatio || 1),
     useCORS: true,
   });
