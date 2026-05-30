@@ -15,6 +15,7 @@ type InlinePart =
   | { type: "superscript" | "subscript" | "underline"; value: string };
 
 const SKIP_TYPES = new Set(["inlineCode", "code", "html", "math", "inlineMath"]);
+type TyporaInlineMark = Exclude<InlinePart["type"], "text">;
 
 export const superscriptAttr = $markAttr("superscript");
 export const subscriptAttr = $markAttr("subscript");
@@ -34,7 +35,8 @@ export const superscriptSchema = $markSchema("superscript", (ctx) => ({
   toMarkdown: {
     match: (mark) => mark.type.name === "superscript",
     runner: (state, _mark, node) => {
-      state.addNode("text", undefined, `^${node.text ?? ""}^`);
+      const markdownNode = createTyporaInlineMarkdownNode("superscript", node.text ?? "");
+      state.addNode(markdownNode.type, undefined, markdownNode.value);
       return true;
     },
   },
@@ -54,7 +56,8 @@ export const subscriptSchema = $markSchema("subscript", (ctx) => ({
   toMarkdown: {
     match: (mark) => mark.type.name === "subscript",
     runner: (state, _mark, node) => {
-      state.addNode("text", undefined, `~${node.text ?? ""}~`);
+      const markdownNode = createTyporaInlineMarkdownNode("subscript", node.text ?? "");
+      state.addNode(markdownNode.type, undefined, markdownNode.value);
       return true;
     },
   },
@@ -74,7 +77,8 @@ export const underlineSchema = $markSchema("underline", (ctx) => ({
   toMarkdown: {
     match: (mark) => mark.type.name === "underline",
     runner: (state, _mark, node) => {
-      state.addNode("html", undefined, `<u>${node.text ?? ""}</u>`);
+      const markdownNode = createTyporaInlineMarkdownNode("underline", node.text ?? "");
+      state.addNode(markdownNode.type, undefined, markdownNode.value);
       return true;
     },
   },
@@ -130,6 +134,12 @@ export function parseTyporaInlineText(value: string): InlinePart[] {
 
   flush();
   return parts;
+}
+
+export function createTyporaInlineMarkdownNode(type: TyporaInlineMark, value: string): MarkdownNode {
+  if (type === "superscript") return { type: "html", value: `^${value}^` };
+  if (type === "subscript") return { type: "html", value: `~${value}~` };
+  return { type: "html", value: `<u>${value}</u>` };
 }
 
 function partToNode(part: InlinePart): MarkdownNode {
