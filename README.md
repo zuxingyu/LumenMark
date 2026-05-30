@@ -11,12 +11,12 @@ LumenMark is a local Markdown reader and editor for Windows 10/11 x64 and macOS 
 - Paste Markdown source from the system clipboard and have headings, lists, quotes, tables, code fences, math, and Mermaid blocks parsed into formatted content.
 - Edit GFM tables and tasks, KaTeX math, Mermaid diagrams, and high-contrast highlighted JSON, Java, JavaScript, TypeScript, Go, Python, HTML, CSS, Rust, C/C++, PHP, XML, Shell, SQL, YAML, Markdown, Mermaid, and Text blocks.
 - Type three backticks followed by letters to search code block languages. For example, ```` ```j ```` offers `json`, `java`, and `javascript`; use Arrow Up/Down, Enter, or the mouse to create the block.
-- Use the native app menus on macOS and Windows for file, export, find, language, view, and formatting commands. The menu follows the active app language.
+- Use the native app menus on macOS and Windows for file, export, find, theme, view, settings, and formatting commands. The menu follows the active app language.
 - Navigate headings with the live outline tab, use find and replace inside the document, and search file names plus Markdown content from the workspace tab.
 - Recover a local draft after a restart or crash. Draft recovery never writes to the original file until you save.
-- Copy code blocks, toggle wrapping per block, click Mermaid previews to reveal their source, and export the current rendered document to HTML, PDF, or PNG. LumenMark never executes code blocks.
+- Copy code blocks, toggle wrapping per block, click Mermaid previews to reveal their source, import CSS-only Typora-style themes, and export the current rendered document to HTML, PDF, or PNG. LumenMark never executes code blocks.
 - Keep unsafe raw HTML inactive, while supporting safe underline tags such as `<u>text</u>`, and restrict local images and document I/O to the selected safety root.
-- Start in Simplified Chinese with an English switch in the native View menu.
+- Start in Simplified Chinese with an English switch in Settings.
 
 ## Run Locally
 
@@ -41,16 +41,16 @@ The sample workspace at `examples/workspace/architecture.md` exercises formulas,
 
 ## Releases
 
-Pushing the `v0.3.8` version tag creates a GitHub Release with:
+Pushing the `v0.3.9` version tag creates a GitHub Release with:
 
 - `LumenMark_<version>_x64-setup.exe` for Windows x64 (NSIS, per-user installation, bundled WebView2 offline installer).
 - `LumenMark_<version>_aarch64.dmg` for macOS Apple Silicon.
 
-Version `v0.3.8` focuses on stability and interface cleanup. It fixes PDF/PNG export failures caused by unsupported modern CSS color functions, adds safe underline rendering through `<u>text</u>`, improves subscript handling, restores stable workspace search states, moves top-bar actions into native menus, changes workspace and outline into sidebar tabs, updates code copy success feedback to a matching line icon, and makes Mermaid previews clickable to reveal source with a softer high-contrast theme. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. macOS uses the system WebKit runtime, so the `.dmg` being much smaller than the Windows installer is expected; installation and launch do not download an additional runtime. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
+Version `v0.3.9` adds CSS-only Typora-style theme import, a native Theme menu, a Settings dialog for theme and language preferences, system-following built-in light/dark themes, and a cleaner writing surface without the old brand header. It also fixes white CodeMirror code block backgrounds in dark mode and preserves the v0.3.8 subscript serialization hotfix. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. macOS uses the system WebKit runtime, so the `.dmg` being much smaller than the Windows installer is expected; installation and launch do not download an additional runtime. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
 
 ## Roadmap
 
-- `v0.3.9`: Stability maintenance, theme/font/reading width settings, and export pagination polish.
+- Mid-term: import complete Typora theme folders, including CSS, fonts, images, asset copying, path rewriting, and safety checks.
 - `v0.4.0`: Signing, notarization, automatic updates, release checksums, and broader public release hardening.
 
 ## Icon

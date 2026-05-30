@@ -3,8 +3,8 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { FindReplaceBar } from "./components/FindReplaceBar";
 import { RecoveryDialog } from "./components/RecoveryDialog";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { Sidebar } from "./components/Sidebar";
-import { Toolbar } from "./components/Toolbar";
 import { UnsavedDialog } from "./components/UnsavedDialog";
 import { clearDraft, loadDraft, saveDraft, sessionFromDraft, shouldPersistDraft, type RecoveryDraft } from "./features/document/draft";
 import { createOpenedSession, createUntitledSession, editSession, markSaved } from "./features/document/session";
@@ -20,9 +20,16 @@ import {
   type ExportFormat,
 } from "./features/export/document-export";
 import { MarkdownPreview } from "./features/preview/MarkdownPreview";
+import {
+  loadThemePreference,
+  resolveActiveTheme,
+  saveThemePreference,
+  scopeTyporaThemeCss,
+  type ThemePreference,
+} from "./features/theme/theme";
 import { initialLocale, LOCALE_KEY, messages, RECENT_WORKSPACES_KEY, type Locale } from "./i18n";
 import { createDemoApi, firstMarkdownPath, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
-import type { DocumentSession, OpenedDocument, RecentWorkspace, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "./types";
+import type { DocumentSession, ImportedTheme, OpenedDocument, RecentWorkspace, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "./types";
 
 interface AppProps {
   api?: DesktopApi;
@@ -37,6 +44,19 @@ const DEFAULT_SIDEBAR_WIDTH = 264;
 const COLLAPSED_SIDEBAR_WIDTH = 56;
 const MIN_EXPANDED_SIDEBAR_WIDTH = 220;
 const MAX_SIDEBAR_WIDTH = 360;
+
+function useSystemDarkMode(): boolean {
+  const [dark, setDark] = useState(() => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false);
+  useEffect(() => {
+    const query = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!query) return;
+    const update = () => setDark(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return dark;
+}
 
 function loadRecentWorkspaces(): RecentWorkspace[] {
   try {
@@ -76,6 +96,10 @@ export function App({ api: providedApi }: AppProps) {
   const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true");
   const [sidebarPanel, setSidebarPanel] = useState<"workspace" | "outline">("workspace");
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference);
+  const [importedThemes, setImportedThemes] = useState<ImportedTheme[]>([]);
+  const [importedThemeCss, setImportedThemeCss] = useState<Record<string, string>>({});
   const [pendingDraft, setPendingDraft] = useState<RecoveryDraft | null>(() => loadDraft());
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [status, setStatus] = useState<string>(() => messages[initialLocale()].ready);
@@ -87,6 +111,8 @@ export function App({ api: providedApi }: AppProps) {
   sessionRef.current = session;
   const outline = useMemo(() => buildOutline(session.sourceText), [session.sourceText]);
   const assetContext = session.root && session.path ? { root: session.root, path: session.path } : null;
+  const systemDark = useSystemDarkMode();
+  const activeTheme = useMemo(() => resolveActiveTheme(importedThemes, systemDark, themePreference), [importedThemes, systemDark, themePreference]);
 
   function replaceSession(next: DocumentSession, revealText?: string) {
     setSearchRevealText(revealText);
@@ -107,8 +133,48 @@ export function App({ api: providedApi }: AppProps) {
   }, [sidebarCollapsed]);
 
   useEffect(() => {
-    void api.setMenuLocale(locale === "zh-CN" ? "zh" : "en").catch(() => undefined);
-  }, [api, locale]);
+    let active = true;
+    void api.listImportedThemes()
+      .then((themes) => {
+        if (active) setImportedThemes(themes);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [api]);
+
+  useEffect(() => {
+    saveThemePreference(themePreference);
+  }, [themePreference]);
+
+  useEffect(() => {
+    document.documentElement.dataset.themeMode = activeTheme.mode;
+    let style = document.querySelector<HTMLStyleElement>("#lumenmark-imported-theme");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "lumenmark-imported-theme";
+      document.head.append(style);
+    }
+    style.textContent = activeTheme.importedId ? scopeTyporaThemeCss(importedThemeCss[activeTheme.importedId] ?? "") : "";
+  }, [activeTheme, importedThemeCss]);
+
+  useEffect(() => {
+    if (!activeTheme.importedId || importedThemeCss[activeTheme.importedId]) return;
+    let active = true;
+    void api.readThemeCss(activeTheme.importedId)
+      .then((css) => {
+        if (active) setImportedThemeCss((current) => ({ ...current, [activeTheme.importedId as string]: css }));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [activeTheme.importedId, api, importedThemeCss]);
+
+  useEffect(() => {
+    void api.setAppMenu(locale === "zh-CN" ? "zh" : "en", importedThemes, themePreference).catch(() => undefined);
+  }, [api, importedThemes, locale, themePreference]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -122,6 +188,20 @@ export function App({ api: providedApi }: AppProps) {
     localStorage.setItem(LOCALE_KEY, next);
     setLocale(next);
     setStatus(messages[next].ready);
+  }
+
+  function selectTheme(theme: ThemePreference) {
+    setThemePreference(theme);
+    setStatus(locale === "zh-CN" ? "已切换主题" : "Theme switched");
+  }
+
+  async function importTheme() {
+    const imported = await api.importThemeCss();
+    if (!imported) return;
+    setImportedThemes((current) => [imported, ...current.filter((theme) => theme.id !== imported.id)]);
+    setImportedThemeCss((current) => ({ ...current, [imported.id]: imported.css }));
+    setThemePreference(`imported:${imported.id}`);
+    setStatus(locale === "zh-CN" ? `已导入主题 ${imported.name}` : `Imported theme ${imported.name}`);
   }
 
   async function exportDocument(format: ExportFormat) {
@@ -488,6 +568,12 @@ export function App({ api: providedApi }: AppProps) {
     else if (command === "toggle-locale") changeLocale();
     else if (command === "show-workspace-panel") setSidebarPanel("workspace");
     else if (command === "show-outline-panel") setSidebarPanel("outline");
+    else if (command === "open-settings") setSettingsVisible(true);
+    else if (command === "theme-system" || command === "theme-system-light" || command === "theme-system-dark") {
+      selectTheme(command.replace("theme-", "") as ThemePreference);
+    } else if (command.startsWith("theme-imported:")) {
+      selectTheme(`imported:${command.slice("theme-imported:".length)}`);
+    }
   };
 
   useEffect(() => {
@@ -512,7 +598,6 @@ export function App({ api: providedApi }: AppProps) {
 
   return (
     <div className="app-shell">
-      <Toolbar labels={labels} />
       <div
         className={sidebarCollapsed ? "workspace-layout sidebar-collapsed" : "workspace-layout"}
         style={{ "--sidebar-width": `${sidebarCollapsed ? COLLAPSED_SIDEBAR_WIDTH : sidebarWidth}px` } as CSSProperties}
@@ -608,6 +693,18 @@ export function App({ api: providedApi }: AppProps) {
             setPendingDraft(null);
             setStatus(locale === "zh-CN" ? "已恢复本地草稿" : "Local draft restored");
           }}
+        />
+      ) : null}
+      {settingsVisible ? (
+        <SettingsDialog
+          labels={labels}
+          localeLabel={labels.changeLanguage}
+          activeTheme={themePreference}
+          importedThemes={importedThemes}
+          onClose={() => setSettingsVisible(false)}
+          onToggleLocale={changeLocale}
+          onImportTheme={() => void attempt(importTheme)}
+          onSelectTheme={selectTheme}
         />
       ) : null}
     </div>

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { DocumentContent, OpenedDocument, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "../types";
+import type { DocumentContent, ImportedTheme, OpenedDocument, ThemeImportResult, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "../types";
+import type { ThemePreference } from "../features/theme/theme";
 
 export interface DesktopApi {
   selectWorkspace(): Promise<WorkspaceInfo | null>;
@@ -16,7 +17,11 @@ export interface DesktopApi {
   searchWorkspace(root: string, query: string): Promise<WorkspaceSearchResult[]>;
   saveExportTextFile(defaultName: string, content: string): Promise<string | null>;
   saveExportBinaryFile(defaultName: string, contentBase64: string): Promise<string | null>;
-  setMenuLocale(locale: "zh" | "en"): Promise<{ success: boolean }>;
+  importThemeCss(): Promise<ThemeImportResult | null>;
+  listImportedThemes(): Promise<ImportedTheme[]>;
+  readThemeCss(themeId: string): Promise<string>;
+  deleteImportedTheme(themeId: string): Promise<{ success: boolean }>;
+  setAppMenu(locale: "zh" | "en", themes: ImportedTheme[], activeThemeId: ThemePreference): Promise<{ success: boolean }>;
 }
 
 export const tauriApi: DesktopApi = {
@@ -35,7 +40,11 @@ export const tauriApi: DesktopApi = {
   searchWorkspace: (root, query) => invoke("search_workspace", { root, query }),
   saveExportTextFile: (defaultName, content) => invoke("save_export_text_file", { defaultName, content }),
   saveExportBinaryFile: (defaultName, contentBase64) => invoke("save_export_binary_file", { defaultName, contentBase64 }),
-  setMenuLocale: (locale) => invoke("set_menu_locale", { locale }),
+  importThemeCss: () => invoke("import_theme_css"),
+  listImportedThemes: () => invoke("list_imported_themes"),
+  readThemeCss: (themeId) => invoke("read_theme_css", { themeId }),
+  deleteImportedTheme: (themeId) => invoke("delete_imported_theme", { themeId }),
+  setAppMenu: (locale, themes, activeThemeId) => invoke("set_app_menu", { locale, themes, activeThemeId }),
 };
 
 const sampleMarkdown = `# Service Deployment Notes
@@ -147,6 +156,10 @@ export function createDemoApi(): DesktopApi {
     },
     saveExportTextFile: async (defaultName) => defaultName,
     saveExportBinaryFile: async (defaultName) => defaultName,
-    setMenuLocale: async () => ({ success: true }),
+    importThemeCss: async () => null,
+    listImportedThemes: async () => [],
+    readThemeCss: async () => "",
+    deleteImportedTheme: async () => ({ success: true }),
+    setAppMenu: async () => ({ success: true }),
   };
 }

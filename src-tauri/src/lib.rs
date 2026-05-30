@@ -59,6 +59,21 @@ pub struct WorkspaceSearchResult {
     pub excerpt: String,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportedTheme {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThemeImportResult {
+    pub id: String,
+    pub name: String,
+    pub css: String,
+}
+
 #[derive(Default)]
 struct ExternalDocumentState {
     pending: Mutex<Vec<OpenedDocument>>,
@@ -98,40 +113,324 @@ impl MenuText {
 }
 
 const FORMAT_MENU_ITEMS: &[(&str, &str, MenuText, Option<&str>)] = &[
-    ("format-paragraph", "paragraph", MenuText { zh: "段落", en: "Paragraph" }, Some("CmdOrCtrl+0")),
-    ("format-heading-1", "heading-1", MenuText { zh: "标题 1", en: "Heading 1" }, Some("CmdOrCtrl+1")),
-    ("format-heading-2", "heading-2", MenuText { zh: "标题 2", en: "Heading 2" }, Some("CmdOrCtrl+2")),
-    ("format-heading-3", "heading-3", MenuText { zh: "标题 3", en: "Heading 3" }, Some("CmdOrCtrl+3")),
-    ("format-heading-4", "heading-4", MenuText { zh: "标题 4", en: "Heading 4" }, Some("CmdOrCtrl+4")),
-    ("format-heading-5", "heading-5", MenuText { zh: "标题 5", en: "Heading 5" }, Some("CmdOrCtrl+5")),
-    ("format-heading-6", "heading-6", MenuText { zh: "标题 6", en: "Heading 6" }, Some("CmdOrCtrl+6")),
-    ("format-blockquote", "blockquote", MenuText { zh: "引用", en: "Quote" }, Some("CmdOrCtrl+Shift+Q")),
-    ("format-bullet-list", "bullet-list", MenuText { zh: "无序列表", en: "Bullet List" }, Some("CmdOrCtrl+Shift+8")),
-    ("format-ordered-list", "ordered-list", MenuText { zh: "有序列表", en: "Ordered List" }, Some("CmdOrCtrl+Shift+7")),
-    ("format-task-list", "task-list", MenuText { zh: "任务列表", en: "Task List" }, None),
-    ("format-code-block", "code-block", MenuText { zh: "代码块", en: "Code Block" }, Some("CmdOrCtrl+Shift+K")),
-    ("format-strong", "strong", MenuText { zh: "加粗", en: "Bold" }, Some("CmdOrCtrl+B")),
-    ("format-emphasis", "emphasis", MenuText { zh: "斜体", en: "Italic" }, Some("CmdOrCtrl+I")),
-    ("format-strikethrough", "strikethrough", MenuText { zh: "删除线", en: "Strikethrough" }, Some("CmdOrCtrl+Shift+X")),
-    ("format-superscript", "superscript", MenuText { zh: "上标", en: "Superscript" }, None),
-    ("format-subscript", "subscript", MenuText { zh: "下标", en: "Subscript" }, None),
-    ("format-underline", "underline", MenuText { zh: "下划线", en: "Underline" }, Some("CmdOrCtrl+U")),
-    ("format-inline-code", "inline-code", MenuText { zh: "行内代码", en: "Inline Code" }, Some("CmdOrCtrl+Shift+C")),
-    ("format-link", "link", MenuText { zh: "链接", en: "Link" }, Some("CmdOrCtrl+K")),
+    (
+        "format-paragraph",
+        "paragraph",
+        MenuText {
+            zh: "段落",
+            en: "Paragraph",
+        },
+        Some("CmdOrCtrl+0"),
+    ),
+    (
+        "format-heading-1",
+        "heading-1",
+        MenuText {
+            zh: "标题 1",
+            en: "Heading 1",
+        },
+        Some("CmdOrCtrl+1"),
+    ),
+    (
+        "format-heading-2",
+        "heading-2",
+        MenuText {
+            zh: "标题 2",
+            en: "Heading 2",
+        },
+        Some("CmdOrCtrl+2"),
+    ),
+    (
+        "format-heading-3",
+        "heading-3",
+        MenuText {
+            zh: "标题 3",
+            en: "Heading 3",
+        },
+        Some("CmdOrCtrl+3"),
+    ),
+    (
+        "format-heading-4",
+        "heading-4",
+        MenuText {
+            zh: "标题 4",
+            en: "Heading 4",
+        },
+        Some("CmdOrCtrl+4"),
+    ),
+    (
+        "format-heading-5",
+        "heading-5",
+        MenuText {
+            zh: "标题 5",
+            en: "Heading 5",
+        },
+        Some("CmdOrCtrl+5"),
+    ),
+    (
+        "format-heading-6",
+        "heading-6",
+        MenuText {
+            zh: "标题 6",
+            en: "Heading 6",
+        },
+        Some("CmdOrCtrl+6"),
+    ),
+    (
+        "format-blockquote",
+        "blockquote",
+        MenuText {
+            zh: "引用",
+            en: "Quote",
+        },
+        Some("CmdOrCtrl+Shift+Q"),
+    ),
+    (
+        "format-bullet-list",
+        "bullet-list",
+        MenuText {
+            zh: "无序列表",
+            en: "Bullet List",
+        },
+        Some("CmdOrCtrl+Shift+8"),
+    ),
+    (
+        "format-ordered-list",
+        "ordered-list",
+        MenuText {
+            zh: "有序列表",
+            en: "Ordered List",
+        },
+        Some("CmdOrCtrl+Shift+7"),
+    ),
+    (
+        "format-task-list",
+        "task-list",
+        MenuText {
+            zh: "任务列表",
+            en: "Task List",
+        },
+        None,
+    ),
+    (
+        "format-code-block",
+        "code-block",
+        MenuText {
+            zh: "代码块",
+            en: "Code Block",
+        },
+        Some("CmdOrCtrl+Shift+K"),
+    ),
+    (
+        "format-strong",
+        "strong",
+        MenuText {
+            zh: "加粗",
+            en: "Bold",
+        },
+        Some("CmdOrCtrl+B"),
+    ),
+    (
+        "format-emphasis",
+        "emphasis",
+        MenuText {
+            zh: "斜体",
+            en: "Italic",
+        },
+        Some("CmdOrCtrl+I"),
+    ),
+    (
+        "format-strikethrough",
+        "strikethrough",
+        MenuText {
+            zh: "删除线",
+            en: "Strikethrough",
+        },
+        Some("CmdOrCtrl+Shift+X"),
+    ),
+    (
+        "format-superscript",
+        "superscript",
+        MenuText {
+            zh: "上标",
+            en: "Superscript",
+        },
+        None,
+    ),
+    (
+        "format-subscript",
+        "subscript",
+        MenuText {
+            zh: "下标",
+            en: "Subscript",
+        },
+        None,
+    ),
+    (
+        "format-underline",
+        "underline",
+        MenuText {
+            zh: "下划线",
+            en: "Underline",
+        },
+        Some("CmdOrCtrl+U"),
+    ),
+    (
+        "format-inline-code",
+        "inline-code",
+        MenuText {
+            zh: "行内代码",
+            en: "Inline Code",
+        },
+        Some("CmdOrCtrl+Shift+C"),
+    ),
+    (
+        "format-link",
+        "link",
+        MenuText {
+            zh: "链接",
+            en: "Link",
+        },
+        Some("CmdOrCtrl+K"),
+    ),
 ];
 
 const APP_MENU_ITEMS: &[(&str, &str, MenuText, Option<&str>)] = &[
-    ("app-new-document", "new-document", MenuText { zh: "新建", en: "New" }, Some("CmdOrCtrl+N")),
-    ("app-open-file", "open-file", MenuText { zh: "打开文件", en: "Open File" }, Some("CmdOrCtrl+O")),
-    ("app-open-folder", "open-folder", MenuText { zh: "打开文件夹", en: "Open Folder" }, Some("CmdOrCtrl+Shift+O")),
-    ("app-save-document", "save-document", MenuText { zh: "保存", en: "Save" }, Some("CmdOrCtrl+S")),
-    ("app-export-html", "export-html", MenuText { zh: "导出 HTML", en: "Export HTML" }, None),
-    ("app-export-pdf", "export-pdf", MenuText { zh: "导出 PDF", en: "Export PDF" }, None),
-    ("app-export-png", "export-png", MenuText { zh: "导出 PNG", en: "Export PNG" }, None),
-    ("app-find", "find", MenuText { zh: "查找", en: "Find" }, Some("CmdOrCtrl+F")),
-    ("app-show-workspace-panel", "show-workspace-panel", MenuText { zh: "工作区", en: "Workspace" }, None),
-    ("app-show-outline-panel", "show-outline-panel", MenuText { zh: "大纲", en: "Outline" }, None),
-    ("app-toggle-locale", "toggle-locale", MenuText { zh: "切换到 English", en: "Switch to 中文" }, None),
+    (
+        "app-new-document",
+        "new-document",
+        MenuText {
+            zh: "新建",
+            en: "New",
+        },
+        Some("CmdOrCtrl+N"),
+    ),
+    (
+        "app-open-file",
+        "open-file",
+        MenuText {
+            zh: "打开文件",
+            en: "Open File",
+        },
+        Some("CmdOrCtrl+O"),
+    ),
+    (
+        "app-open-folder",
+        "open-folder",
+        MenuText {
+            zh: "打开文件夹",
+            en: "Open Folder",
+        },
+        Some("CmdOrCtrl+Shift+O"),
+    ),
+    (
+        "app-save-document",
+        "save-document",
+        MenuText {
+            zh: "保存",
+            en: "Save",
+        },
+        Some("CmdOrCtrl+S"),
+    ),
+    (
+        "app-export-html",
+        "export-html",
+        MenuText {
+            zh: "导出 HTML",
+            en: "Export HTML",
+        },
+        None,
+    ),
+    (
+        "app-export-pdf",
+        "export-pdf",
+        MenuText {
+            zh: "导出 PDF",
+            en: "Export PDF",
+        },
+        None,
+    ),
+    (
+        "app-export-png",
+        "export-png",
+        MenuText {
+            zh: "导出 PNG",
+            en: "Export PNG",
+        },
+        None,
+    ),
+    (
+        "app-find",
+        "find",
+        MenuText {
+            zh: "查找",
+            en: "Find",
+        },
+        Some("CmdOrCtrl+F"),
+    ),
+    (
+        "app-show-workspace-panel",
+        "show-workspace-panel",
+        MenuText {
+            zh: "工作区",
+            en: "Workspace",
+        },
+        None,
+    ),
+    (
+        "app-show-outline-panel",
+        "show-outline-panel",
+        MenuText {
+            zh: "大纲",
+            en: "Outline",
+        },
+        None,
+    ),
+    (
+        "app-toggle-locale",
+        "toggle-locale",
+        MenuText {
+            zh: "切换到 English",
+            en: "Switch to 中文",
+        },
+        None,
+    ),
+    (
+        "app-open-settings",
+        "open-settings",
+        MenuText {
+            zh: "设置",
+            en: "Settings",
+        },
+        Some("CmdOrCtrl+,"),
+    ),
+];
+
+const BUILT_IN_THEME_MENU_ITEMS: &[(&str, &str, MenuText)] = &[
+    (
+        "theme-system",
+        "system",
+        MenuText {
+            zh: "跟随系统",
+            en: "Follow System",
+        },
+    ),
+    (
+        "theme-system-light",
+        "system-light",
+        MenuText {
+            zh: "浅色主题",
+            en: "Light Theme",
+        },
+    ),
+    (
+        "theme-system-dark",
+        "system-dark",
+        MenuText {
+            zh: "深色主题",
+            en: "Dark Theme",
+        },
+    ),
 ];
 
 fn format_command_from_menu_id(id: &str) -> Option<&'static str> {
@@ -148,6 +447,21 @@ fn app_command_from_menu_id(id: &str) -> Option<&'static str> {
         .map(|(_, command, _, _)| *command)
 }
 
+fn theme_menu_id_for_imported(theme_id: &str) -> String {
+    format!("theme-imported_{}", theme_id.replace(':', "_"))
+}
+
+fn theme_command_from_menu_id(id: &str) -> Option<String> {
+    if let Some((_, command, _)) = BUILT_IN_THEME_MENU_ITEMS
+        .iter()
+        .find(|(menu_id, _, _)| *menu_id == id)
+    {
+        return Some((*command).to_string());
+    }
+    id.strip_prefix("theme-imported_")
+        .map(|theme_id| format!("imported:{theme_id}"))
+}
+
 fn localized_menu_label(locale: MenuLocale, key: &str) -> &'static str {
     match (locale, key) {
         (MenuLocale::Zh, "file") => "文件",
@@ -160,6 +474,8 @@ fn localized_menu_label(locale: MenuLocale, key: &str) -> &'static str {
         (MenuLocale::En, "format") => "Format",
         (MenuLocale::Zh, "view") => "显示",
         (MenuLocale::En, "view") => "View",
+        (MenuLocale::Zh, "theme") => "主题",
+        (MenuLocale::En, "theme") => "Theme",
         _ => "",
     }
 }
@@ -167,14 +483,35 @@ fn localized_menu_label(locale: MenuLocale, key: &str) -> &'static str {
 fn build_app_menu_for_locale<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     locale: MenuLocale,
+    themes: &[ImportedTheme],
 ) -> tauri::Result<Menu<R>> {
     let format_items = FORMAT_MENU_ITEMS
         .iter()
-        .map(|(id, _, label, accelerator)| MenuItem::with_id(app, *id, label.get(locale), true, *accelerator))
+        .map(|(id, _, label, accelerator)| {
+            MenuItem::with_id(app, *id, label.get(locale), true, *accelerator)
+        })
         .collect::<tauri::Result<Vec<_>>>()?;
     let app_items = APP_MENU_ITEMS
         .iter()
-        .map(|(id, _, label, accelerator)| MenuItem::with_id(app, *id, label.get(locale), true, *accelerator))
+        .map(|(id, _, label, accelerator)| {
+            MenuItem::with_id(app, *id, label.get(locale), true, *accelerator)
+        })
+        .collect::<tauri::Result<Vec<_>>>()?;
+    let theme_items = BUILT_IN_THEME_MENU_ITEMS
+        .iter()
+        .map(|(id, _, label)| MenuItem::with_id(app, *id, label.get(locale), true, None::<&str>))
+        .collect::<tauri::Result<Vec<_>>>()?;
+    let imported_theme_items = themes
+        .iter()
+        .map(|theme| {
+            MenuItem::with_id(
+                app,
+                theme_menu_id_for_imported(&theme.id),
+                theme.name.clone(),
+                true,
+                None::<&str>,
+            )
+        })
         .collect::<tauri::Result<Vec<_>>>()?;
 
     Menu::with_items(
@@ -207,6 +544,7 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                     &app_items[2],
                     &PredefinedMenuItem::separator(app)?,
                     &app_items[3],
+                    &app_items[11],
                     &PredefinedMenuItem::separator(app)?,
                     &PredefinedMenuItem::close_window(app, None)?,
                     #[cfg(not(target_os = "macos"))]
@@ -217,11 +555,7 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                 app,
                 localized_menu_label(locale, "export"),
                 true,
-                &[
-                    &app_items[4],
-                    &app_items[5],
-                    &app_items[6],
-                ],
+                &[&app_items[4], &app_items[5], &app_items[6]],
             )?,
             &Submenu::with_items(
                 app,
@@ -271,13 +605,35 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
             )?,
             &Submenu::with_items(
                 app,
+                localized_menu_label(locale, "theme"),
+                true,
+                &[
+                    &theme_items[0],
+                    &theme_items[1],
+                    &theme_items[2],
+                    &PredefinedMenuItem::separator(app)?,
+                    &Submenu::with_items(
+                        app,
+                        MenuText {
+                            zh: "已导入主题",
+                            en: "Imported Themes",
+                        }
+                        .get(locale),
+                        true,
+                        &imported_theme_items
+                            .iter()
+                            .map(|item| item as &dyn tauri::menu::IsMenuItem<R>)
+                            .collect::<Vec<_>>(),
+                    )?,
+                ],
+            )?,
+            &Submenu::with_items(
+                app,
                 localized_menu_label(locale, "view"),
                 true,
                 &[
                     &app_items[8],
                     &app_items[9],
-                    &PredefinedMenuItem::separator(app)?,
-                    &app_items[10],
                     #[cfg(target_os = "macos")]
                     &PredefinedMenuItem::separator(app)?,
                     #[cfg(target_os = "macos")]
@@ -289,7 +645,7 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
 }
 
 fn build_app_menu<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<Menu<R>> {
-    build_app_menu_for_locale(app, MenuLocale::Zh)
+    build_app_menu_for_locale(app, MenuLocale::Zh, &[])
 }
 
 fn has_only_normal_components(path: &Path) -> bool {
@@ -346,13 +702,15 @@ fn require_markdown(path: &Path) -> CommandResult<()> {
 }
 
 fn is_hidden_path(path: &Path) -> bool {
-    path.components().any(|part| {
-        matches!(part, Component::Normal(name) if name.to_string_lossy().starts_with('.'))
-    })
+    path.components().any(
+        |part| matches!(part, Component::Normal(name) if name.to_string_lossy().starts_with('.')),
+    )
 }
 
 fn folder_contains_markdown(root: &Path, directory: &Path) -> CommandResult<bool> {
-    for entry in fs::read_dir(directory).map_err(|error| format!("Unable to inspect folder: {error}"))? {
+    for entry in
+        fs::read_dir(directory).map_err(|error| format!("Unable to inspect folder: {error}"))?
+    {
         let path = entry
             .map_err(|error| format!("Unable to inspect entry: {error}"))?
             .path();
@@ -413,6 +771,107 @@ pub fn read_asset_data_url(
     };
     let bytes = fs::read(asset).map_err(|error| format!("Unable to read image: {error}"))?;
     Ok(format!("data:{mime};base64,{}", STANDARD.encode(bytes)))
+}
+
+fn require_theme_css(path: &Path) -> CommandResult<()> {
+    match path.extension().and_then(|extension| extension.to_str()) {
+        Some(extension) if extension.eq_ignore_ascii_case("css") => Ok(()),
+        _ => Err("LumenMark only imports CSS theme files.".to_string()),
+    }
+}
+
+fn sanitize_theme_css(css: &str) -> String {
+    fn unsafe_url(value: &str) -> bool {
+        let normalized = value.trim().trim_matches(['"', '\'']).to_ascii_lowercase();
+        normalized.starts_with("http:")
+            || normalized.starts_with("https:")
+            || normalized.starts_with("file:")
+            || normalized.starts_with('/')
+            || normalized.starts_with('\\')
+            || normalized.starts_with('.')
+    }
+
+    let mut output = String::new();
+    for line in css.lines() {
+        if line
+            .trim_start()
+            .to_ascii_lowercase()
+            .starts_with("@import")
+        {
+            continue;
+        }
+        let mut remaining = line;
+        while let Some(start) = remaining.to_ascii_lowercase().find("url(") {
+            output.push_str(&remaining[..start]);
+            let after = &remaining[start + 4..];
+            if let Some(end) = after.find(')') {
+                let url_value = &after[..end];
+                output.push_str(if unsafe_url(url_value) {
+                    "none"
+                } else {
+                    "none"
+                });
+                remaining = &after[end + 1..];
+            } else {
+                remaining = "";
+                break;
+            }
+        }
+        output.push_str(remaining);
+        output.push('\n');
+    }
+    output
+}
+
+fn theme_id_from_name(name: &str) -> String {
+    let mut id = name
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() {
+                ch.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>();
+    while id.contains("--") {
+        id = id.replace("--", "-");
+    }
+    id = id.trim_matches('-').to_string();
+    if id.is_empty() {
+        "theme".to_string()
+    } else {
+        id
+    }
+}
+
+fn themes_dir(app: &tauri::AppHandle) -> CommandResult<PathBuf> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Unable to resolve application data directory: {error}"))?
+        .join("themes");
+    fs::create_dir_all(&dir)
+        .map_err(|error| format!("Unable to create theme directory: {error}"))?;
+    Ok(dir)
+}
+
+fn theme_metadata_path(dir: &Path) -> PathBuf {
+    dir.join("themes.json")
+}
+
+fn read_theme_metadata(dir: &Path) -> Vec<ImportedTheme> {
+    fs::read_to_string(theme_metadata_path(dir))
+        .ok()
+        .and_then(|content| serde_json::from_str::<Vec<ImportedTheme>>(&content).ok())
+        .unwrap_or_default()
+}
+
+fn write_theme_metadata(dir: &Path, themes: &[ImportedTheme]) -> CommandResult<()> {
+    let content = serde_json::to_string_pretty(themes)
+        .map_err(|error| format!("Unable to serialize theme metadata: {error}"))?;
+    fs::write(theme_metadata_path(dir), content)
+        .map_err(|error| format!("Unable to save theme metadata: {error}"))
 }
 
 fn relative_string(root: &Path, entry: &Path) -> CommandResult<String> {
@@ -524,14 +983,18 @@ fn save_export_text_file(default_name: String, content: String) -> CommandResult
         .set_file_name(default_name)
         .save_file()
         .map(|path| {
-            fs::write(&path, content).map_err(|error| format!("Unable to export document: {error}"))?;
+            fs::write(&path, content)
+                .map_err(|error| format!("Unable to export document: {error}"))?;
             Ok(path.to_string_lossy().to_string())
         })
         .transpose()
 }
 
 #[tauri::command]
-fn save_export_binary_file(default_name: String, content_base64: String) -> CommandResult<Option<String>> {
+fn save_export_binary_file(
+    default_name: String,
+    content_base64: String,
+) -> CommandResult<Option<String>> {
     rfd::FileDialog::new()
         .set_file_name(default_name)
         .save_file()
@@ -539,7 +1002,8 @@ fn save_export_binary_file(default_name: String, content_base64: String) -> Comm
             let bytes = STANDARD
                 .decode(content_base64.as_bytes())
                 .map_err(|error| format!("Unable to decode exported document: {error}"))?;
-            fs::write(&path, bytes).map_err(|error| format!("Unable to export document: {error}"))?;
+            fs::write(&path, bytes)
+                .map_err(|error| format!("Unable to export document: {error}"))?;
             Ok(path.to_string_lossy().to_string())
         })
         .transpose()
@@ -547,11 +1011,95 @@ fn save_export_binary_file(default_name: String, content_base64: String) -> Comm
 
 #[tauri::command]
 fn set_menu_locale(app: tauri::AppHandle, locale: String) -> CommandResult<OperationResult> {
-    let menu = build_app_menu_for_locale(&app, MenuLocale::from_code(&locale))
+    let menu = build_app_menu_for_locale(&app, MenuLocale::from_code(&locale), &[])
         .map_err(|error| format!("Unable to build application menu: {error}"))?;
     app.set_menu(menu)
         .map_err(|error| format!("Unable to update application menu: {error}"))?;
     Ok(OperationResult { success: true })
+}
+
+#[tauri::command]
+fn set_app_menu(
+    app: tauri::AppHandle,
+    locale: String,
+    themes: Vec<ImportedTheme>,
+    _active_theme_id: String,
+) -> CommandResult<OperationResult> {
+    let menu = build_app_menu_for_locale(&app, MenuLocale::from_code(&locale), &themes)
+        .map_err(|error| format!("Unable to build application menu: {error}"))?;
+    app.set_menu(menu)
+        .map_err(|error| format!("Unable to update application menu: {error}"))?;
+    Ok(OperationResult { success: true })
+}
+
+#[tauri::command]
+fn list_imported_themes(app: tauri::AppHandle) -> CommandResult<Vec<ImportedTheme>> {
+    let dir = themes_dir(&app)?;
+    Ok(read_theme_metadata(&dir))
+}
+
+#[tauri::command]
+fn read_theme_css(app: tauri::AppHandle, theme_id: String) -> CommandResult<String> {
+    let dir = themes_dir(&app)?;
+    if !theme_id
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || ch == '-')
+    {
+        return Err("Invalid theme id.".to_string());
+    }
+    fs::read_to_string(dir.join(format!("{theme_id}.css")))
+        .map_err(|error| format!("Unable to read theme CSS: {error}"))
+}
+
+#[tauri::command]
+fn delete_imported_theme(
+    app: tauri::AppHandle,
+    theme_id: String,
+) -> CommandResult<OperationResult> {
+    let dir = themes_dir(&app)?;
+    let mut themes = read_theme_metadata(&dir);
+    themes.retain(|theme| theme.id != theme_id);
+    let _ = fs::remove_file(dir.join(format!("{theme_id}.css")));
+    write_theme_metadata(&dir, &themes)?;
+    Ok(OperationResult { success: true })
+}
+
+#[tauri::command]
+fn import_theme_css(app: tauri::AppHandle) -> CommandResult<Option<ThemeImportResult>> {
+    let selected = rfd::FileDialog::new()
+        .add_filter("CSS", &["css"])
+        .pick_file();
+    selected
+        .map(|path| {
+            require_theme_css(&path)?;
+            let raw = fs::read_to_string(&path)
+                .map_err(|error| format!("Unable to read theme CSS: {error}"))?;
+            if raw.len() > 512 * 1024 {
+                return Err("Theme CSS is too large.".to_string());
+            }
+            let css = sanitize_theme_css(&raw);
+            let name = path
+                .file_stem()
+                .and_then(|value| value.to_str())
+                .unwrap_or("Theme")
+                .to_string();
+            let id = theme_id_from_name(&name);
+            let dir = themes_dir(&app)?;
+            fs::write(dir.join(format!("{id}.css")), &css)
+                .map_err(|error| format!("Unable to save theme CSS: {error}"))?;
+            let mut themes = read_theme_metadata(&dir);
+            themes.retain(|theme| theme.id != id);
+            themes.insert(
+                0,
+                ImportedTheme {
+                    id: id.clone(),
+                    name: name.clone(),
+                },
+            );
+            write_theme_metadata(&dir, &themes)?;
+            Ok(ThemeImportResult { id, name, css })
+        })
+        .transpose()
 }
 
 #[tauri::command]
@@ -611,8 +1159,14 @@ fn read_markdown_file(root: String, relative_path: String) -> CommandResult<Docu
 
 const SEARCH_MAX_FILE_BYTES: u64 = 1_000_000;
 
-fn collect_markdown_files(root: &Path, directory: &Path, files: &mut Vec<PathBuf>) -> CommandResult<()> {
-    for entry in fs::read_dir(directory).map_err(|error| format!("Unable to search folder: {error}"))? {
+fn collect_markdown_files(
+    root: &Path,
+    directory: &Path,
+    files: &mut Vec<PathBuf>,
+) -> CommandResult<()> {
+    for entry in
+        fs::read_dir(directory).map_err(|error| format!("Unable to search folder: {error}"))?
+    {
         let path = entry
             .map_err(|error| format!("Unable to search entry: {error}"))?
             .path();
@@ -773,6 +1327,8 @@ pub fn run() {
         .on_menu_event(|app, event| {
             if let Some(command) = format_command_from_menu_id(event.id().as_ref()) {
                 let _ = app.emit("format-command", command);
+            } else if let Some(command) = theme_command_from_menu_id(event.id().as_ref()) {
+                let _ = app.emit("app-command", format!("theme-{command}"));
             } else if let Some(command) = app_command_from_menu_id(event.id().as_ref()) {
                 let _ = app.emit("app-command", command);
             }
@@ -804,7 +1360,12 @@ pub fn run() {
             search_workspace,
             save_export_text_file,
             save_export_binary_file,
-            set_menu_locale
+            set_menu_locale,
+            set_app_menu,
+            import_theme_css,
+            list_imported_themes,
+            read_theme_css,
+            delete_imported_theme
         ])
         .build(tauri::generate_context!())
         .expect("error while building LumenMark")
@@ -952,7 +1513,11 @@ mod tests {
         let root = tempdir().expect("temp search");
         fs::create_dir(root.path().join("docs")).expect("docs");
         fs::create_dir(root.path().join(".git")).expect("hidden");
-        fs::write(root.path().join("docs/guide.md"), "first\nneedle here\nlast").expect("fixture");
+        fs::write(
+            root.path().join("docs/guide.md"),
+            "first\nneedle here\nlast",
+        )
+        .expect("fixture");
         fs::write(root.path().join("notes.txt"), "needle").expect("ignored");
         fs::write(root.path().join(".git/hidden.md"), "needle").expect("hidden fixture");
 
@@ -973,7 +1538,11 @@ mod tests {
     fn searches_markdown_file_names_and_content_with_result_kinds() {
         let root = tempdir().expect("temp search");
         fs::create_dir(root.path().join("docs")).expect("docs");
-        fs::write(root.path().join("docs/needle-guide.md"), "first\nneedle here").expect("fixture");
+        fs::write(
+            root.path().join("docs/needle-guide.md"),
+            "first\nneedle here",
+        )
+        .expect("fixture");
         fs::write(root.path().join("docs/other.md"), "needle elsewhere").expect("fixture");
 
         let results = super::search_workspace(
@@ -1013,9 +1582,13 @@ mod tests {
         fs::write(root.path().join("assets/logo.png"), "png").expect("asset");
         fs::write(root.path().join("nested/child/deep.md"), "# Deep").expect("deep");
 
-        let entries = super::list_workspace_entries(root.path().to_string_lossy().to_string(), None)
-            .expect("entries");
-        let names = entries.iter().map(|entry| entry.name.as_str()).collect::<Vec<_>>();
+        let entries =
+            super::list_workspace_entries(root.path().to_string_lossy().to_string(), None)
+                .expect("entries");
+        let names = entries
+            .iter()
+            .map(|entry| entry.name.as_str())
+            .collect::<Vec<_>>();
 
         assert!(names.contains(&"docs"));
         assert!(names.contains(&"nested"));
@@ -1024,13 +1597,34 @@ mod tests {
 
     #[test]
     fn desktop_menu_declares_typora_style_format_commands() {
-        assert_eq!(super::format_command_from_menu_id("format-paragraph"), Some("paragraph"));
-        assert_eq!(super::format_command_from_menu_id("format-heading-1"), Some("heading-1"));
-        assert_eq!(super::format_command_from_menu_id("format-heading-6"), Some("heading-6"));
-        assert_eq!(super::format_command_from_menu_id("format-superscript"), Some("superscript"));
-        assert_eq!(super::format_command_from_menu_id("format-subscript"), Some("subscript"));
-        assert_eq!(super::format_command_from_menu_id("format-underline"), Some("underline"));
-        assert_eq!(super::format_command_from_menu_id("format-link"), Some("link"));
+        assert_eq!(
+            super::format_command_from_menu_id("format-paragraph"),
+            Some("paragraph")
+        );
+        assert_eq!(
+            super::format_command_from_menu_id("format-heading-1"),
+            Some("heading-1")
+        );
+        assert_eq!(
+            super::format_command_from_menu_id("format-heading-6"),
+            Some("heading-6")
+        );
+        assert_eq!(
+            super::format_command_from_menu_id("format-superscript"),
+            Some("superscript")
+        );
+        assert_eq!(
+            super::format_command_from_menu_id("format-subscript"),
+            Some("subscript")
+        );
+        assert_eq!(
+            super::format_command_from_menu_id("format-underline"),
+            Some("underline")
+        );
+        assert_eq!(
+            super::format_command_from_menu_id("format-link"),
+            Some("link")
+        );
         assert_eq!(super::format_command_from_menu_id("not-format-link"), None);
         let source = include_str!("lib.rs");
         assert!(source.contains(".menu("));
@@ -1040,13 +1634,83 @@ mod tests {
             !label.get(super::MenuLocale::Zh).contains("Paragraph")
                 && !label.get(super::MenuLocale::En).contains('段')
         }));
-        assert_eq!(super::localized_menu_label(super::MenuLocale::Zh, "file"), "文件");
-        assert_eq!(super::localized_menu_label(super::MenuLocale::En, "file"), "File");
-        assert_eq!(super::localized_menu_label(super::MenuLocale::Zh, "export"), "导出");
-        assert_eq!(super::localized_menu_label(super::MenuLocale::En, "export"), "Export");
-        assert_eq!(super::app_command_from_menu_id("app-open-file"), Some("open-file"));
-        assert_eq!(super::app_command_from_menu_id("app-open-folder"), Some("open-folder"));
-        assert_eq!(super::app_command_from_menu_id("app-export-pdf"), Some("export-pdf"));
-        assert_eq!(super::app_command_from_menu_id("app-show-outline-panel"), Some("show-outline-panel"));
+        assert_eq!(
+            super::localized_menu_label(super::MenuLocale::Zh, "file"),
+            "文件"
+        );
+        assert_eq!(
+            super::localized_menu_label(super::MenuLocale::En, "file"),
+            "File"
+        );
+        assert_eq!(
+            super::localized_menu_label(super::MenuLocale::Zh, "export"),
+            "导出"
+        );
+        assert_eq!(
+            super::localized_menu_label(super::MenuLocale::En, "export"),
+            "Export"
+        );
+        assert_eq!(
+            super::app_command_from_menu_id("app-open-file"),
+            Some("open-file")
+        );
+        assert_eq!(
+            super::app_command_from_menu_id("app-open-folder"),
+            Some("open-folder")
+        );
+        assert_eq!(
+            super::app_command_from_menu_id("app-export-pdf"),
+            Some("export-pdf")
+        );
+        assert_eq!(
+            super::app_command_from_menu_id("app-show-outline-panel"),
+            Some("show-outline-panel")
+        );
+    }
+
+    #[test]
+    fn desktop_menu_declares_settings_and_theme_commands() {
+        assert_eq!(
+            super::app_command_from_menu_id("app-open-settings"),
+            Some("open-settings")
+        );
+        assert_eq!(
+            super::theme_command_from_menu_id("theme-system"),
+            Some("system".to_string())
+        );
+        assert_eq!(
+            super::theme_command_from_menu_id("theme-system-dark"),
+            Some("system-dark".to_string())
+        );
+        assert_eq!(
+            super::theme_command_from_menu_id("theme-imported_typora-newsprint"),
+            Some("imported:typora-newsprint".to_string())
+        );
+        assert_eq!(
+            super::localized_menu_label(super::MenuLocale::Zh, "theme"),
+            "主题"
+        );
+        assert_eq!(
+            super::localized_menu_label(super::MenuLocale::En, "theme"),
+            "Theme"
+        );
+    }
+
+    #[test]
+    fn imported_theme_css_is_sanitized_and_validated() {
+        assert!(super::require_theme_css(Path::new("newsprint.css")).is_ok());
+        assert!(super::require_theme_css(Path::new("newsprint.md")).is_err());
+        let input = r#"
+            @import url("https://example.com/private.css");
+            #write { color: #222; }
+            code { background-image: url(file:///private/person/theme.png); }
+            p { background-image: url("/private/person/theme.png"); }
+        "#;
+        let sanitized = super::sanitize_theme_css(input);
+        assert!(!sanitized.contains("@import"));
+        assert!(!sanitized.contains("https://"));
+        assert!(!sanitized.contains("file://"));
+        assert!(!sanitized.contains("/private/person"));
+        assert!(sanitized.contains("#write"));
     }
 }

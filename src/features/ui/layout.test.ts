@@ -55,4 +55,17 @@ describe("application layout", () => {
     expect(styles).toContain(".crepe-root .milkdown");
     expect(styles).toContain("background: var(--page)");
   });
+
+  it("removes the old brand toolbar and lets the editor start at the top of the window", () => {
+    expect(styles).not.toContain(".brand-mark");
+    expect(styles).not.toContain(".toolbar");
+    expect(cssRule(".app-shell")).toContain("grid-template-rows: minmax(0, 1fr) auto");
+  });
+
+  it("forces CodeMirror code blocks and code tool buttons onto theme variables", () => {
+    expect(cssRule(".crepe-root .milkdown-code-block .cm-editor")).toContain("background: var(--code-bg)");
+    expect(cssRule(".crepe-root .milkdown-code-block .cm-scroller")).toContain("background: var(--code-bg)");
+    expect(cssRule(".crepe-root .milkdown-code-block .cm-gutters")).toContain("background: var(--code-bg)");
+    expect(cssRule(".code-block-tools button, .code-wrap-toggle")).toContain("background: var(--code-bg)");
+  });
 });

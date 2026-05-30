@@ -53,6 +53,15 @@ export interface RecentWorkspace {
   name: string;
 }
 
+export interface ImportedTheme {
+  id: string;
+  name: string;
+}
+
+export interface ThemeImportResult extends ImportedTheme {
+  css: string;
+}
+
 export interface OutlineItem {
   id: string;
   level: number;

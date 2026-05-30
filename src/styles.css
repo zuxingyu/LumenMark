@@ -79,6 +79,44 @@
   }
 }
 
+:root[data-theme-mode="dark"] {
+  color: #edf0f6;
+  background: #14161a;
+  --window: #14161a;
+  --chrome: rgba(25, 28, 34, 0.92);
+  --sidebar: #181b20;
+  --page: #1d2026;
+  --border: #303640;
+  --text: #edf0f6;
+  --muted: #9da6b5;
+  --accent: #6fa3ff;
+  --accent-soft: #263754;
+  --surface: #242830;
+  --shadow: none;
+  --code-bg: #111827;
+  --code-text: #e5e7eb;
+  --code-caret: #f8fafc;
+  --code-selection: #1e3a8a;
+  --code-active-line: rgba(96, 165, 250, 0.12);
+  --code-line-number: #94a3b8;
+  --code-border: #334155;
+  --code-border-strong: #64748b;
+  --code-keyword: #c4b5fd;
+  --code-name: #5eead4;
+  --code-function: #93c5fd;
+  --code-constant: #fbbf24;
+  --code-type: #fda4af;
+  --code-number: #fcd34d;
+  --code-operator: #e2e8f0;
+  --code-comment: #94a3b8;
+  --code-link: #93c5fd;
+  --code-heading: #bfdbfe;
+  --code-atom: #d8b4fe;
+  --code-string: #86efac;
+  --code-invalid: #fca5a5;
+  --code-punctuation: #f8fafc;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -127,42 +165,17 @@ button.primary:hover:not(:disabled) {
 .app-shell {
   height: 100%;
   display: grid;
-  grid-template-rows: 60px minmax(0, 1fr) 30px;
+  grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
   background: var(--window);
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  padding: 0 18px;
-  gap: 24px;
-  border-bottom: 1px solid var(--border);
-  background: var(--chrome);
-  backdrop-filter: blur(18px);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 176px;
-  letter-spacing: -0.01em;
-}
-
-.brand-mark,
 .welcome-mark {
   display: grid;
   place-items: center;
   color: white;
   background: linear-gradient(145deg, #3b82f6, #2563eb);
   font-weight: 700;
-}
-
-.brand-mark {
-  height: 30px;
-  width: 30px;
-  border-radius: 8px;
 }
 
 .workspace-layout {
@@ -576,7 +589,7 @@ button.primary:hover:not(:disabled) {
   max-width: 1360px;
   min-height: 100%;
   margin: 0 auto;
-  padding: 28px clamp(24px, 4vw, 56px) 70px;
+  padding: 18px clamp(24px, 4vw, 56px) 70px;
 }
 
 .visual-document-header {
@@ -591,7 +604,7 @@ button.primary:hover:not(:disabled) {
 }
 
 .crepe-root {
-  min-height: calc(100vh - 150px);
+  min-height: calc(100vh - 78px);
   color: var(--text);
 }
 
@@ -618,6 +631,26 @@ button.primary:hover:not(:disabled) {
   position: relative;
 }
 
+.crepe-root .milkdown-code-block .cm-editor {
+  background: var(--code-bg);
+  color: var(--code-text);
+}
+
+.crepe-root .milkdown-code-block .cm-scroller {
+  background: var(--code-bg);
+}
+
+.crepe-root .milkdown-code-block .cm-gutters {
+  background: var(--code-bg);
+  color: var(--code-line-number);
+  border-right-color: var(--code-border);
+}
+
+.crepe-root .milkdown-code-block .cm-content {
+  background: var(--code-bg);
+  color: var(--code-text);
+}
+
 .code-block-tools {
   position: absolute;
   z-index: 4;
@@ -628,8 +661,7 @@ button.primary:hover:not(:disabled) {
   gap: 6px;
 }
 
-.code-block-tools button,
-.code-wrap-toggle {
+.code-block-tools button, .code-wrap-toggle {
   width: 28px;
   height: 26px;
   padding: 0;
@@ -637,13 +669,12 @@ button.primary:hover:not(:disabled) {
   place-items: center;
   border: 1px solid var(--code-border);
   border-radius: 6px;
-  color: var(--muted);
-  background: var(--page);
+  color: var(--code-text);
+  background: var(--code-bg);
   font-size: 12px;
 }
 
-.code-block-tools svg,
-.code-wrap-toggle svg {
+.code-block-tools svg, .code-wrap-toggle svg {
   width: 15px;
   height: 15px;
   fill: none;
@@ -1070,6 +1101,57 @@ button.primary:hover:not(:disabled) {
   border-radius: 14px;
   background: var(--page);
   box-shadow: 0 25px 60px rgba(15, 23, 42, 0.2);
+}
+
+.settings-dialog {
+  width: min(520px, calc(100vw - 32px));
+  display: grid;
+  gap: 18px;
+}
+
+.settings-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-dialog header button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+}
+
+.settings-section {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-section h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.theme-choice-list {
+  display: grid;
+  gap: 7px;
+}
+
+.theme-choice-list button {
+  min-height: 34px;
+  text-align: left;
+}
+
+.theme-choice-list button.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .dialog h2 {

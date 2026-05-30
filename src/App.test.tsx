@@ -35,7 +35,11 @@ const api: DesktopApi = {
   pendingExternalDocuments: async () => [],
   saveExportTextFile: async (defaultName) => defaultName,
   saveExportBinaryFile: async (defaultName) => defaultName,
-  setMenuLocale: async () => ({ success: true }),
+  importThemeCss: async () => null,
+  listImportedThemes: async () => [],
+  readThemeCss: async () => "",
+  deleteImportedTheme: async () => ({ success: true }),
+  setAppMenu: async () => ({ success: true }),
 };
 
 function dispatchAppCommand(command: string) {
@@ -56,6 +60,7 @@ describe("LumenMark app shell", () => {
   it("starts in an untitled Chinese visual editing document and persists an English locale choice", async () => {
     const { unmount } = render(<App api={api} />);
     await waitFor(() => expect(screen.queryByRole("heading", { name: "未命名" })).not.toBeInTheDocument());
+    expect(screen.queryByText("LumenMark")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "打开文件夹" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "English" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "预览" })).not.toBeInTheDocument();
@@ -281,6 +286,41 @@ describe("LumenMark app shell", () => {
     dispatchAppCommand("export-html");
 
     await waitFor(() => expect(saveExportTextFile).toHaveBeenCalledWith("未命名.html", expect.stringContaining("<!doctype html>")));
+  });
+
+  it("opens settings from the file menu and switches language there", async () => {
+    render(<App api={api} />);
+
+    dispatchAppCommand("open-settings");
+
+    expect(await screen.findByRole("dialog", { name: "设置" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+
+    await waitFor(() => expect(localStorage.getItem("lumenmark.locale")).toBe("en-US"));
+    expect(screen.getByRole("dialog", { name: "Settings" })).toBeVisible();
+  });
+
+  it("loads imported themes, imports CSS themes, and switches themes from menu commands", async () => {
+    const setAppMenu = vi.fn().mockResolvedValue({ success: true });
+    const importThemeCss = vi.fn().mockResolvedValue({
+      id: "typora-newsprint",
+      name: "Newsprint",
+      css: "#write { color: rgb(10, 20, 30); }",
+    });
+    render(<App api={{ ...api, importThemeCss, setAppMenu }} />);
+
+    await waitFor(() => expect(setAppMenu).toHaveBeenCalled());
+    dispatchAppCommand("open-settings");
+    fireEvent.click(await screen.findByRole("button", { name: "导入主题" }));
+
+    await waitFor(() => expect(importThemeCss).toHaveBeenCalled());
+    expect(await screen.findByRole("button", { name: "Newsprint" })).toBeVisible();
+
+    dispatchAppCommand("theme-imported:typora-newsprint");
+
+    await waitFor(() => expect(localStorage.getItem("lumenmark.theme.active")).toBe("imported:typora-newsprint"));
+    expect(document.documentElement.dataset.themeMode).toBe("imported");
+    expect(document.querySelector("#lumenmark-imported-theme")?.textContent).toContain(".markdown-theme-scope");
   });
 
   it("opens file-name workspace search matches without showing a null line number", async () => {

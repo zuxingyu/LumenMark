@@ -165,7 +165,7 @@ export function MarkdownPreview({ locale = "en-US", source, imageResolver }: Mar
   };
 
   return (
-    <article className="markdown-preview">
+    <article className="markdown-preview markdown-theme-scope typora-export">
       <ReactMarkdown
         remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkMath, typoraInlineRemarkPlugin]}
         rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}

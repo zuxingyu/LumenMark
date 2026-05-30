@@ -36,7 +36,7 @@ body { margin: 0; background: var(--page, #fff); }
   </style>
 </head>
 <body>
-  <main class="export-document markdown-preview">${body}</main>
+  <main class="export-document markdown-preview markdown-theme-scope typora-export">${body}</main>
 </body>
 </html>`;
 }
