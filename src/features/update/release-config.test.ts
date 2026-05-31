@@ -12,6 +12,7 @@ describe("updater release configuration", () => {
       "https://github.com/zuxingyu/LumenMark/releases/latest/download/latest.json",
     ]);
     expect(workflow).toContain("TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}");
+    expect(workflow).toContain("--target aarch64-apple-darwin --bundles app,dmg");
     expect(workflow).not.toContain("PRIVATE KEY-----");
   });
 });
