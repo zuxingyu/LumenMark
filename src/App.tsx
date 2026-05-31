@@ -21,6 +21,7 @@ import {
 } from "./features/export/document-export";
 import { MarkdownPreview } from "./features/preview/MarkdownPreview";
 import {
+  buildApplicationThemeCss,
   loadThemePreference,
   resolveActiveTheme,
   saveThemePreference,
@@ -98,6 +99,7 @@ export function App({ api: providedApi }: AppProps) {
   const [sidebarPanel, setSidebarPanel] = useState<"workspace" | "outline">("workspace");
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference);
+  const [previewThemePreference, setPreviewThemePreference] = useState<ThemePreference | null>(null);
   const [importedThemes, setImportedThemes] = useState<ImportedTheme[]>([]);
   const [importedThemeCss, setImportedThemeCss] = useState<Record<string, string>>({});
   const [pendingDraft, setPendingDraft] = useState<RecoveryDraft | null>(() => loadDraft());
@@ -112,7 +114,8 @@ export function App({ api: providedApi }: AppProps) {
   const outline = useMemo(() => buildOutline(session.sourceText), [session.sourceText]);
   const assetContext = session.root && session.path ? { root: session.root, path: session.path } : null;
   const systemDark = useSystemDarkMode();
-  const activeTheme = useMemo(() => resolveActiveTheme(importedThemes, systemDark, themePreference), [importedThemes, systemDark, themePreference]);
+  const effectiveThemePreference = previewThemePreference ?? themePreference;
+  const activeTheme = useMemo(() => resolveActiveTheme(importedThemes, systemDark, effectiveThemePreference), [effectiveThemePreference, importedThemes, systemDark]);
 
   function replaceSession(next: DocumentSession, revealText?: string) {
     setSearchRevealText(revealText);
@@ -156,7 +159,8 @@ export function App({ api: providedApi }: AppProps) {
       style.id = "lumenmark-imported-theme";
       document.head.append(style);
     }
-    style.textContent = activeTheme.importedId ? scopeTyporaThemeCss(importedThemeCss[activeTheme.importedId] ?? "") : "";
+    const importedCss = activeTheme.importedId ? importedThemeCss[activeTheme.importedId] ?? "" : "";
+    style.textContent = importedCss ? `${buildApplicationThemeCss(importedCss)}\n${scopeTyporaThemeCss(importedCss)}` : "";
   }, [activeTheme, importedThemeCss]);
 
   useEffect(() => {
@@ -191,8 +195,37 @@ export function App({ api: providedApi }: AppProps) {
   }
 
   function selectTheme(theme: ThemePreference) {
+    setPreviewThemePreference(null);
     setThemePreference(theme);
     setStatus(locale === "zh-CN" ? "已切换主题" : "Theme switched");
+  }
+
+  function previewTheme(theme: ThemePreference) {
+    setPreviewThemePreference(theme);
+    setStatus(locale === "zh-CN" ? "正在预览主题" : "Previewing theme");
+  }
+
+  function cancelThemePreview() {
+    setPreviewThemePreference(null);
+    setStatus(locale === "zh-CN" ? "已取消主题预览" : "Theme preview canceled");
+  }
+
+  async function deleteTheme(themeId: string) {
+    const theme = importedThemes.find((item) => item.id === themeId);
+    const confirmed = window.confirm(locale === "zh-CN" ? `删除主题 ${theme?.name ?? themeId}？` : `Delete theme ${theme?.name ?? themeId}?`);
+    if (!confirmed) return;
+    await api.deleteImportedTheme(themeId);
+    setImportedThemes((current) => current.filter((item) => item.id !== themeId));
+    setImportedThemeCss((current) => {
+      const next = { ...current };
+      delete next[themeId];
+      return next;
+    });
+    if (themePreference === `imported:${themeId}` || previewThemePreference === `imported:${themeId}`) {
+      setPreviewThemePreference(null);
+      setThemePreference("system");
+    }
+    setStatus(locale === "zh-CN" ? "已删除主题" : "Theme deleted");
   }
 
   async function importTheme() {
@@ -700,11 +733,18 @@ export function App({ api: providedApi }: AppProps) {
           labels={labels}
           localeLabel={labels.changeLanguage}
           activeTheme={themePreference}
+          previewTheme={previewThemePreference}
           importedThemes={importedThemes}
-          onClose={() => setSettingsVisible(false)}
+          onClose={() => {
+            setPreviewThemePreference(null);
+            setSettingsVisible(false);
+          }}
           onToggleLocale={changeLocale}
           onImportTheme={() => void attempt(importTheme)}
           onSelectTheme={selectTheme}
+          onPreviewTheme={previewTheme}
+          onCancelPreview={cancelThemePreview}
+          onDeleteTheme={(themeId) => void attempt(() => deleteTheme(themeId))}
         />
       ) : null}
     </div>

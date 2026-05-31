@@ -46,6 +46,15 @@ describe("MarkdownPreview", () => {
     await waitFor(() => expect(screen.getByLabelText("diagram")).toBeVisible());
   });
 
+  it("exposes GitHub and Typora compatible theme classes on the preview surface", () => {
+    render(<MarkdownPreview source={"# Themed"} />);
+
+    const preview = document.querySelector(".markdown-preview");
+    expect(preview).toHaveClass("markdown-theme-scope");
+    expect(preview).toHaveClass("typora-export");
+    expect(preview).toHaveClass("markdown-body");
+  });
+
   it("renders Typora-style superscript and subscript while preserving strikethrough", () => {
     render(<MarkdownPreview source={"E = mc^2^ and H~2~O plus ~~removed~~"} />);
 

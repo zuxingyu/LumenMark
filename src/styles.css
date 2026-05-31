@@ -629,6 +629,8 @@ button.primary:hover:not(:disabled) {
 
 .crepe-root .milkdown-code-block {
   position: relative;
+  background: var(--code-bg);
+  color: var(--code-text);
 }
 
 .crepe-root .milkdown-code-block .cm-editor {
@@ -647,6 +649,12 @@ button.primary:hover:not(:disabled) {
 }
 
 .crepe-root .milkdown-code-block .cm-content {
+  background: var(--code-bg);
+  color: var(--code-text);
+}
+
+.crepe-root .milkdown-code-block .cm-line,
+.crepe-root .milkdown-code-block .codemirror-host {
   background: var(--code-bg);
   color: var(--code-text);
 }
@@ -778,13 +786,18 @@ button.primary:hover:not(:disabled) {
 }
 
 .crepe-root .milkdown-code-block.mermaid-source-visible .codemirror-host.hidden,
+.crepe-root .milkdown-code-block.preview-source-visible .codemirror-host.hidden,
 .crepe-root .milkdown-code-block.mermaid-source-visible .cm-editor,
-.crepe-root .milkdown-code-block.mermaid-source-visible .cm-content {
+.crepe-root .milkdown-code-block.preview-source-visible .cm-editor,
+.crepe-root .milkdown-code-block.mermaid-source-visible .cm-content,
+.crepe-root .milkdown-code-block.preview-source-visible .cm-content {
   display: block !important;
 }
 
 .crepe-root .milkdown-code-block.mermaid-source-visible .preview-panel,
-.crepe-root .milkdown-code-block.mermaid-source-visible .mermaid-preview {
+.crepe-root .milkdown-code-block.preview-source-visible .preview-panel,
+.crepe-root .milkdown-code-block.mermaid-source-visible .mermaid-preview,
+.crepe-root .milkdown-code-block.preview-source-visible .mermaid-preview {
   margin-top: 12px;
 }
 
@@ -794,6 +807,16 @@ button.primary:hover:not(:disabled) {
 
 .crepe-root .milkdown-code-block .preview-toggle-button {
   display: none !important;
+}
+
+.crepe-root .milkdown-code-block .preview-panel {
+  background: var(--code-bg);
+  color: var(--code-text);
+  border-color: var(--code-border);
+}
+
+.crepe-root .milkdown-code-block .katex {
+  color: var(--code-text);
 }
 
 .crepe-root .milkdown-code-block .language-button,
@@ -1106,7 +1129,8 @@ button.primary:hover:not(:disabled) {
 .settings-dialog {
   width: min(520px, calc(100vw - 32px));
   display: grid;
-  gap: 18px;
+  gap: 16px;
+  background: var(--surface);
 }
 
 .settings-dialog header {
@@ -1152,6 +1176,67 @@ button.primary:hover:not(:disabled) {
   color: var(--accent);
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+
+.compact-button {
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.theme-list {
+  display: grid;
+  gap: 8px;
+}
+
+.theme-row {
+  min-height: 38px;
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--chrome);
+}
+
+.theme-row.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.theme-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.icon-button.danger:hover,
+.icon-button.danger:focus-visible {
+  color: #c83c44;
+  border-color: #c83c44;
+  background: color-mix(in srgb, #c83c44 12%, transparent);
 }
 
 .dialog h2 {

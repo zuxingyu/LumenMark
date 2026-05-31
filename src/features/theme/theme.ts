@@ -69,18 +69,97 @@ function scopeSelector(selector: string): string {
   const trimmed = selector.trim();
   if (!trimmed) return trimmed;
   if (/^(?:from|to|\d+(?:\.\d+)?%)$/i.test(trimmed)) return trimmed;
-  if (/^(?:#write|\.typora-export|body|html)$/i.test(trimmed)) return ".markdown-theme-scope";
+  if (/^(?:#write|\.typora-export|\.markdown-body|body|html)$/i.test(trimmed)) return ".markdown-theme-scope.markdown-body";
+  if (trimmed.startsWith(".markdown-body")) return trimmed.replace(/^\.markdown-body/, ".markdown-theme-scope.markdown-body");
   if (trimmed.startsWith(".markdown-theme-scope")) return trimmed;
   return `.markdown-theme-scope ${trimmed}`;
 }
 
-export function scopeTyporaThemeCss(css: string): string {
-  const safe = sanitizeImportedThemeCss(css);
-  return safe.replace(/([^{}@][^{}]*)\{/g, (_match, selectorText: string) => {
+function scopeCssBlock(css: string): string {
+  return css.replace(/([^{}@][^{}]*)\{/g, (_match, selectorText: string) => {
     const selectors = selectorText
       .split(",")
       .map(scopeSelector)
       .join(", ");
     return `${selectors} {`;
   });
+}
+
+export function scopeTyporaThemeCss(css: string): string {
+  const safe = sanitizeImportedThemeCss(css);
+  const mediaPattern = /@media[^{]+\{(?:[^{}]|\{[^{}]*\})*\}/gi;
+  let output = "";
+  let cursor = 0;
+  for (const match of safe.matchAll(mediaPattern)) {
+    const index = match.index ?? 0;
+    output += scopeCssBlock(safe.slice(cursor, index));
+    const mediaBlock = match[0];
+    const open = mediaBlock.indexOf("{");
+    const prefix = mediaBlock.slice(0, open + 1);
+    const body = mediaBlock.slice(open + 1, -1);
+    output += `${prefix}${scopeCssBlock(body)}}`;
+    cursor = index + mediaBlock.length;
+  }
+  output += scopeCssBlock(safe.slice(cursor));
+  return output;
+}
+
+function cssValue(css: string, selectorPattern: string, property: string): string | undefined {
+  const selector = selectorPattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const block = css.match(new RegExp(`${selector}\\s*\\{([^}]+)\\}`, "i"))?.[1];
+  return block?.match(new RegExp(`${property}\\s*:\\s*([^;]+)`, "i"))?.[1]?.trim();
+}
+
+function firstValue(...values: Array<string | undefined>): string | undefined {
+  return values.find((value) => value && !value.startsWith("var("));
+}
+
+export function buildApplicationThemeCss(css: string): string {
+  const safe = sanitizeImportedThemeCss(css);
+  const text = firstValue(cssValue(safe, ".markdown-body", "color"), "#1f2328");
+  const page = firstValue(cssValue(safe, ".markdown-body", "background-color"), cssValue(safe, ".markdown-body", "background"), "#ffffff");
+  const accent = firstValue(cssValue(safe, ".markdown-body a", "color"), cssValue(safe, ".markdown-body", "--fgColor-accent"), "#2563eb");
+  const border = firstValue(cssValue(safe, ".markdown-body h1", "border-bottom-color"), cssValue(safe, ".markdown-body table td", "border-color"), "#d1d5db");
+  const codeBg = firstValue(cssValue(safe, ".markdown-body pre", "background-color"), cssValue(safe, ".markdown-body pre", "background"), "#f6f8fa");
+  const codeText = firstValue(cssValue(safe, ".markdown-body code", "color"), text);
+  const codeString = firstValue(cssValue(safe, ".markdown-body", "--color-prettylights-syntax-string"), codeText);
+  const codeComment = firstValue(cssValue(safe, ".markdown-body", "--color-prettylights-syntax-comment"), "#6b7280");
+  const codeKeyword = firstValue(cssValue(safe, ".markdown-body", "--color-prettylights-syntax-keyword"), accent);
+  const codeNumber = firstValue(cssValue(safe, ".markdown-body", "--color-prettylights-syntax-constant"), accent);
+  return `
+:root[data-theme-mode="imported"] {
+  --window: ${page};
+  --app-bg: ${page};
+  --chrome: ${codeBg};
+  --sidebar: ${codeBg};
+  --surface: ${codeBg};
+  --page: ${page};
+  --text: ${text};
+  --muted: ${codeComment};
+  --border: ${border ?? codeComment};
+  --accent: ${accent};
+  --accent-soft: color-mix(in srgb, ${accent} 16%, transparent);
+  --code-bg: ${codeBg};
+  --code-text: ${codeText};
+  --code-line-number: ${codeComment};
+  --code-border: ${border ?? codeComment};
+  --code-border-strong: ${accent};
+  --code-caret: ${accent};
+  --code-selection: color-mix(in srgb, ${accent} 22%, transparent);
+  --code-active-line: color-mix(in srgb, ${accent} 12%, transparent);
+  --code-keyword: ${codeKeyword};
+  --code-name: ${codeText};
+  --code-function: ${accent};
+  --code-constant: ${codeNumber};
+  --code-type: ${accent};
+  --code-number: ${codeNumber};
+  --code-operator: ${codeText};
+  --code-comment: ${codeComment};
+  --code-link: ${accent};
+  --code-heading: ${accent};
+  --code-atom: ${codeNumber};
+  --code-string: ${codeString};
+  --code-invalid: #ef4444;
+  --code-punctuation: ${codeText};
+}`.trim();
 }

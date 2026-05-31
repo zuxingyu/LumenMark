@@ -63,9 +63,18 @@ describe("application layout", () => {
   });
 
   it("forces CodeMirror code blocks and code tool buttons onto theme variables", () => {
+    expect(cssRule(".crepe-root .milkdown-code-block")).toContain("background: var(--code-bg)");
     expect(cssRule(".crepe-root .milkdown-code-block .cm-editor")).toContain("background: var(--code-bg)");
     expect(cssRule(".crepe-root .milkdown-code-block .cm-scroller")).toContain("background: var(--code-bg)");
     expect(cssRule(".crepe-root .milkdown-code-block .cm-gutters")).toContain("background: var(--code-bg)");
     expect(cssRule(".code-block-tools button, .code-wrap-toggle")).toContain("background: var(--code-bg)");
+  });
+
+  it("themes LaTeX preview blocks and settings controls without white surfaces", () => {
+    expect(cssRule(".crepe-root .milkdown-code-block .preview-panel")).toContain("background: var(--code-bg)");
+    expect(cssRule(".crepe-root .milkdown-code-block .katex")).toContain("color: var(--code-text)");
+    expect(cssRule(".settings-dialog")).toContain("background: var(--surface)");
+    expect(cssRule(".theme-row")).toContain("background: var(--chrome)");
+    expect(cssRule(".icon-button")).toContain("background: transparent");
   });
 });

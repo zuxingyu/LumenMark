@@ -187,7 +187,7 @@ export function VisualMarkdownEditor({ labels, title, value, onChange, resolveIm
   }, []);
 
   return (
-    <section className="visual-editor markdown-theme-scope typora-export" aria-label={title}>
+    <section className="visual-editor markdown-theme-scope typora-export markdown-body" aria-label={title}>
       <div className="crepe-root" ref={editorRoot} />
       {languageSearch ? (
         <div

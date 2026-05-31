@@ -447,6 +447,21 @@ fn app_command_from_menu_id(id: &str) -> Option<&'static str> {
         .map(|(_, command, _, _)| *command)
 }
 
+#[cfg(test)]
+fn application_menu_item_ids() -> Vec<&'static str> {
+    vec!["app-open-settings"]
+}
+
+#[cfg(test)]
+fn file_menu_item_ids() -> Vec<&'static str> {
+    vec![
+        "app-new-document",
+        "app-open-file",
+        "app-open-folder",
+        "app-save-document",
+    ]
+}
+
 fn theme_menu_id_for_imported(theme_id: &str) -> String {
     format!("theme-imported_{}", theme_id.replace(':', "_"))
 }
@@ -525,6 +540,8 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                 &[
                     &PredefinedMenuItem::about(app, None, None)?,
                     &PredefinedMenuItem::separator(app)?,
+                    &app_items[11],
+                    &PredefinedMenuItem::separator(app)?,
                     &PredefinedMenuItem::services(app, None)?,
                     &PredefinedMenuItem::separator(app)?,
                     &PredefinedMenuItem::hide(app, None)?,
@@ -532,6 +549,13 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                     &PredefinedMenuItem::separator(app)?,
                     &PredefinedMenuItem::quit(app, None)?,
                 ],
+            )?,
+            #[cfg(not(target_os = "macos"))]
+            &Submenu::with_items(
+                app,
+                app.package_info().name.clone(),
+                true,
+                &[&app_items[11]],
             )?,
             &Submenu::with_items(
                 app,
@@ -544,7 +568,6 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                     &app_items[2],
                     &PredefinedMenuItem::separator(app)?,
                     &app_items[3],
-                    &app_items[11],
                     &PredefinedMenuItem::separator(app)?,
                     &PredefinedMenuItem::close_window(app, None)?,
                     #[cfg(not(target_os = "macos"))]
@@ -1673,6 +1696,11 @@ mod tests {
         assert_eq!(
             super::app_command_from_menu_id("app-open-settings"),
             Some("open-settings")
+        );
+        assert!(super::application_menu_item_ids().contains(&"app-open-settings"));
+        assert!(
+            !super::file_menu_item_ids().contains(&"app-open-settings"),
+            "settings belongs in the LumenMark application menu, not File"
         );
         assert_eq!(
             super::theme_command_from_menu_id("theme-system"),

@@ -314,13 +314,42 @@ describe("LumenMark app shell", () => {
     fireEvent.click(await screen.findByRole("button", { name: "导入主题" }));
 
     await waitFor(() => expect(importThemeCss).toHaveBeenCalled());
-    expect(await screen.findByRole("button", { name: "Newsprint" })).toBeVisible();
+    expect(await screen.findByLabelText("Newsprint 主题")).toBeVisible();
 
     dispatchAppCommand("theme-imported:typora-newsprint");
 
     await waitFor(() => expect(localStorage.getItem("lumenmark.theme.active")).toBe("imported:typora-newsprint"));
     expect(document.documentElement.dataset.themeMode).toBe("imported");
     expect(document.querySelector("#lumenmark-imported-theme")?.textContent).toContain(".markdown-theme-scope");
+  });
+
+  it("previews, applies, and deletes imported themes from the compact settings manager", async () => {
+    const setAppMenu = vi.fn().mockResolvedValue({ success: true });
+    const deleteImportedTheme = vi.fn().mockResolvedValue({ success: true });
+    const readThemeCss = vi.fn().mockResolvedValue(".markdown-body { color: #f0f6fc; background-color: #0d1117; }");
+    render(<App api={{
+      ...api,
+      setAppMenu,
+      deleteImportedTheme,
+      readThemeCss,
+      listImportedThemes: async () => [{ id: "github-dark", name: "GitHub Dark" }],
+    }} />);
+
+    dispatchAppCommand("open-settings");
+
+    const row = await screen.findByLabelText("GitHub Dark 主题");
+    fireEvent.click(within(row).getByRole("button", { name: "预览 GitHub Dark" }));
+    await waitFor(() => expect(document.documentElement.dataset.themeMode).toBe("imported"));
+    expect(localStorage.getItem("lumenmark.theme.active")).not.toBe("imported:github-dark");
+
+    fireEvent.click(within(row).getByRole("button", { name: "应用 GitHub Dark" }));
+    await waitFor(() => expect(localStorage.getItem("lumenmark.theme.active")).toBe("imported:github-dark"));
+
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.click(within(row).getByRole("button", { name: "删除 GitHub Dark" }));
+
+    await waitFor(() => expect(deleteImportedTheme).toHaveBeenCalledWith("github-dark"));
+    await waitFor(() => expect(localStorage.getItem("lumenmark.theme.active")).toBe("system"));
   });
 
   it("opens file-name workspace search matches without showing a null line number", async () => {

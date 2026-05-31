@@ -129,4 +129,32 @@ describe("code block enhancements", () => {
 
     expect(block).not.toHaveClass("mermaid-source-visible");
   });
+
+  it("reveals LaTeX source when the rendered formula preview is clicked and hides it on blur", () => {
+    document.body.innerHTML = `
+      <div class="crepe-root">
+        <div class="milkdown-code-block" data-language="LaTeX">
+          <div class="cm-editor">
+            <div class="cm-content" contenteditable="true"><div class="cm-line">e^{i\\theta}=\\cos\\theta+i\\sin\\theta</div></div>
+          </div>
+          <div class="preview-panel"><span class="katex">formula</span></div>
+        </div>
+      </div>
+    `;
+
+    enhanceCodeBlockControls(document.querySelector(".crepe-root") as HTMLElement, { wrapLabel: "Wrap code", copyLabel: "Copy" });
+    const block = document.querySelector<HTMLElement>(".milkdown-code-block");
+    const preview = document.querySelector<HTMLElement>(".preview-panel");
+
+    expect(block).not.toHaveClass("preview-source-visible");
+
+    preview?.click();
+
+    expect(block).toHaveClass("preview-source-visible");
+    expect(block?.querySelector(".cm-content")).toHaveFocus();
+
+    block?.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: document.body }));
+
+    expect(block).not.toHaveClass("preview-source-visible");
+  });
 });

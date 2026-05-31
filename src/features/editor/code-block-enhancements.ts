@@ -40,7 +40,64 @@ function extractCodeText(block: HTMLElement): string {
   return clone.querySelector<HTMLElement>("pre, code")?.textContent ?? clone.textContent ?? "";
 }
 
+function blockLanguageText(block: HTMLElement): string {
+  return [
+    block.dataset.language,
+    block.getAttribute("data-language"),
+    block.querySelector<HTMLElement>("[data-language]")?.dataset.language,
+    block.querySelector<HTMLElement>(".language-button, .language-label")?.textContent,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
 function isMermaidBlock(block: HTMLElement): boolean {
+  const declaredLanguage = blockLanguageText(block);
+  return declaredLanguage.includes("mermaid") || Boolean(block.querySelector(".mermaid-preview, .mermaid-diagram"));
+}
+
+function isPreviewEditableBlock(block: HTMLElement): boolean {
+  const declaredLanguage = blockLanguageText(block);
+  return isMermaidBlock(block)
+    || declaredLanguage.includes("latex")
+    || Boolean(block.querySelector(".preview-panel .katex, .katex-display"));
+}
+
+function sourceVisibleClass(block: HTMLElement): string {
+  return isMermaidBlock(block) ? "mermaid-source-visible" : "preview-source-visible";
+}
+
+function previewSelector(block: HTMLElement): string {
+  return isMermaidBlock(block) ? ".mermaid-preview, .mermaid-diagram, .preview-panel" : ".preview-panel, .katex, .katex-display";
+}
+
+function focusPreviewSource(block: HTMLElement) {
+  block.classList.add(sourceVisibleClass(block));
+  if (isMermaidBlock(block)) block.classList.add("preview-source-visible");
+  const focusTarget =
+    block.querySelector<HTMLElement>(".cm-content")
+    ?? block.querySelector<HTMLElement>(".cm-editor, textarea, pre, code");
+  if (!focusTarget) return;
+  if (!focusTarget.hasAttribute("tabindex") && focusTarget instanceof HTMLElement) {
+    focusTarget.tabIndex = -1;
+  }
+  focusTarget.focus();
+}
+
+function bindPreviewEditing(block: HTMLElement) {
+  if (!isPreviewEditableBlock(block) || block.dataset.previewEditingBound === "true") return;
+  block.dataset.previewEditingBound = "true";
+  block.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest(previewSelector(block))) return;
+    focusPreviewSource(block);
+  });
+  block.addEventListener("focusout", (event) => {
+    const nextTarget = event.relatedTarget as Node | null;
+    if (nextTarget && block.contains(nextTarget)) return;
+    block.classList.remove("mermaid-source-visible", "preview-source-visible");
+  });
+}
+
+function legacyIsMermaidBlock(block: HTMLElement): boolean {
   const declaredLanguage = [
     block.dataset.language,
     block.getAttribute("data-language"),
@@ -63,7 +120,7 @@ function focusMermaidSource(block: HTMLElement) {
 }
 
 function bindMermaidPreviewEditing(block: HTMLElement) {
-  if (!isMermaidBlock(block) || block.dataset.mermaidEditingBound === "true") return;
+  if (!legacyIsMermaidBlock(block) || block.dataset.mermaidEditingBound === "true") return;
   block.dataset.mermaidEditingBound = "true";
   block.addEventListener("click", (event) => {
     const target = event.target as HTMLElement | null;
@@ -96,6 +153,7 @@ export function enhanceCodeBlockControls(root: HTMLElement, labels: CodeBlockCon
   const apply = () => {
     root.querySelectorAll<HTMLElement>(".milkdown-code-block").forEach((block) => {
       bindMermaidPreviewEditing(block);
+      bindPreviewEditing(block);
       let toolbar = block.querySelector<HTMLElement>(".code-block-tools");
       if (!toolbar) {
         toolbar = document.createElement("div");
