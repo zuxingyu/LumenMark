@@ -1594,15 +1594,15 @@ mod tests {
     }
 
     #[test]
-    fn desktop_bundle_declares_cross_platform_icons_and_macos_dmg() {
+    fn desktop_bundle_declares_cross_platform_icons_and_macos_app_updater_and_dmg() {
         let config = include_str!("../tauri.conf.json");
+        let release_workflow = include_str!("../../.github/workflows/release.yml");
         assert!(config.contains("\"icon\""));
         assert!(config.contains("\"icons/icon.icns\""));
         assert!(config.contains("\"icons/icon.ico\""));
         assert!(config.contains("\"icons/icon.png\""));
-        assert!(include_str!("../../.github/workflows/release.yml").contains("--bundles dmg"));
-        assert!(include_str!("../../.github/workflows/release.yml")
-            .contains("--target aarch64-apple-darwin"));
+        assert!(release_workflow.contains("--target aarch64-apple-darwin"));
+        assert!(release_workflow.contains("--bundles app,dmg"));
     }
 
     #[test]
