@@ -41,16 +41,16 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## 安装包与首次运行
 
-推送 `v0.3.10` 版本标签后，GitHub Release 会生成：
+推送 `v0.3.11` 版本标签后，GitHub Release 会生成：
 
 - Windows x64 的 `LumenMark_<version>_x64-setup.exe`（NSIS 用户级安装，包含 WebView2 离线安装器）。
 - macOS Apple Silicon 的 `LumenMark_<version>_aarch64.dmg`。
+- 用于应用内检查更新的签名 updater artifacts 和 `latest.json`。
 
-`v0.3.10` 是 v0.3.9 的 hotfix：导入 CSS 主题后会影响整个应用壳，设置入口移到 `LumenMark` 应用菜单，设置弹窗新增紧凑的主题预览、应用和删除操作，并修复 GitHub Markdown CSS 兼容、深色代码块白底、LaTeX 公式块白底等问题。块级 LaTeX 公式也支持像 Mermaid 一样点击预览后显示源码，失焦后恢复预览。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 使用系统 WebKit，因此 `.dmg` 体积明显小于 Windows 安装包是正常结果；安装和启动不需要下载额外运行时。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
+`v0.3.11` 新增通过 `LumenMark` 应用菜单检查 GitHub Release 签名更新、下载、安装并重启；同时扩展 GitHub、终端、Solarized 和 Lumen 写作风格官方主题，并强化应用壳、工作区、大纲、链接弹框、Mermaid、图片和图表画布的主题可读性。该版本仍为测试版本。Windows 安装包未签名，并内置 WebView2 离线安装器，安装时不需要联网下载 WebView2。macOS 使用系统 WebKit，因此 `.dmg` 体积明显小于 Windows 安装包是正常结果；安装和启动不需要下载额外运行时。macOS 应用包已进行 ad-hoc 签名以保证 Apple Silicon 能校验应用包结构，但尚未经过 Apple 公证。Windows 首次运行时可能显示 SmartScreen 提示；macOS 首次运行时可在 Finder 中右键选择“打开”，或在“系统设置 > 隐私与安全性”中允许启动。
 
 ## 后续路线
 
-- `v0.3.11`：主题兼容性和导入诊断增强。
 - `v0.3.12`：编辑器稳定性和 Markdown 语法回归修复。
 - `v0.3.13`：PDF/PNG/HTML 导出质量强化。
 - 中远期版本：支持导入完整 Typora 主题文件夹，包含 CSS、字体、图片等 assets 的复制、路径重写和安全校验。

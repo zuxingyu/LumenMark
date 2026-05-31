@@ -396,6 +396,15 @@ const APP_MENU_ITEMS: &[(&str, &str, MenuText, Option<&str>)] = &[
         None,
     ),
     (
+        "app-check-updates",
+        "check-updates",
+        MenuText {
+            zh: "检查更新...",
+            en: "Check for Updates...",
+        },
+        None,
+    ),
+    (
         "app-open-settings",
         "open-settings",
         MenuText {
@@ -407,6 +416,70 @@ const APP_MENU_ITEMS: &[(&str, &str, MenuText, Option<&str>)] = &[
 ];
 
 const BUILT_IN_THEME_MENU_ITEMS: &[(&str, &str, MenuText)] = &[
+    (
+        "theme-official_github-light",
+        "official:github-light",
+        MenuText {
+            zh: "GitHub 浅色",
+            en: "GitHub Light",
+        },
+    ),
+    (
+        "theme-official_github-dark-dimmed",
+        "official:github-dark-dimmed",
+        MenuText {
+            zh: "GitHub 暗色柔和",
+            en: "GitHub Dark Dimmed",
+        },
+    ),
+    (
+        "theme-official_github-dark-colorblind",
+        "official:github-dark-colorblind",
+        MenuText {
+            zh: "GitHub 暗色高辨识",
+            en: "GitHub Dark Colorblind",
+        },
+    ),
+    (
+        "theme-official_oh-my-zsh-dark",
+        "official:oh-my-zsh-dark",
+        MenuText {
+            zh: "Oh My Zsh 暗色",
+            en: "Oh My Zsh Dark",
+        },
+    ),
+    (
+        "theme-official_monokai-terminal",
+        "official:monokai-terminal",
+        MenuText {
+            zh: "Monokai 终端",
+            en: "Monokai Terminal",
+        },
+    ),
+    (
+        "theme-official_solarized-light",
+        "official:solarized-light",
+        MenuText {
+            zh: "Solarized 浅色",
+            en: "Solarized Light",
+        },
+    ),
+    (
+        "theme-official_lumen-paper",
+        "official:lumen-paper",
+        MenuText {
+            zh: "Lumen 纸张",
+            en: "Lumen Paper",
+        },
+    ),
+    (
+        "theme-official_lumen-ink",
+        "official:lumen-ink",
+        MenuText {
+            zh: "Lumen 墨色",
+            en: "Lumen Ink",
+        },
+    ),
     (
         "theme-system",
         "system",
@@ -449,7 +522,7 @@ fn app_command_from_menu_id(id: &str) -> Option<&'static str> {
 
 #[cfg(test)]
 fn application_menu_item_ids() -> Vec<&'static str> {
-    vec!["app-open-settings"]
+    vec!["app-check-updates", "app-open-settings"]
 }
 
 #[cfg(test)]
@@ -541,6 +614,7 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                     &PredefinedMenuItem::about(app, None, None)?,
                     &PredefinedMenuItem::separator(app)?,
                     &app_items[11],
+                    &app_items[12],
                     &PredefinedMenuItem::separator(app)?,
                     &PredefinedMenuItem::services(app, None)?,
                     &PredefinedMenuItem::separator(app)?,
@@ -555,7 +629,7 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                 app,
                 app.package_info().name.clone(),
                 true,
-                &[&app_items[11]],
+                &[&app_items[11], &app_items[12]],
             )?,
             &Submenu::with_items(
                 app,
@@ -634,6 +708,17 @@ fn build_app_menu_for_locale<R: tauri::Runtime>(
                     &theme_items[0],
                     &theme_items[1],
                     &theme_items[2],
+                    &PredefinedMenuItem::separator(app)?,
+                    &theme_items[3],
+                    &theme_items[4],
+                    &theme_items[5],
+                    &PredefinedMenuItem::separator(app)?,
+                    &theme_items[6],
+                    &theme_items[7],
+                    &theme_items[8],
+                    &PredefinedMenuItem::separator(app)?,
+                    &theme_items[9],
+                    &theme_items[10],
                     &PredefinedMenuItem::separator(app)?,
                     &Submenu::with_items(
                         app,
@@ -1357,6 +1442,8 @@ pub fn run() {
             }
         })
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|_app| {
             #[cfg(target_os = "windows")]
             if let Some(path) = std::env::args()
@@ -1693,14 +1780,32 @@ mod tests {
 
     #[test]
     fn desktop_menu_declares_settings_and_theme_commands() {
+        let application_items = super::application_menu_item_ids();
+        let check_position = application_items
+            .iter()
+            .position(|id| *id == "app-check-updates")
+            .expect("check update menu item");
+        let settings_position = application_items
+            .iter()
+            .position(|id| *id == "app-open-settings")
+            .expect("settings menu item");
+        assert!(check_position < settings_position);
+        assert_eq!(
+            super::app_command_from_menu_id("app-check-updates"),
+            Some("check-updates")
+        );
         assert_eq!(
             super::app_command_from_menu_id("app-open-settings"),
             Some("open-settings")
         );
-        assert!(super::application_menu_item_ids().contains(&"app-open-settings"));
+        assert!(application_items.contains(&"app-open-settings"));
         assert!(
             !super::file_menu_item_ids().contains(&"app-open-settings"),
             "settings belongs in the LumenMark application menu, not File"
+        );
+        assert!(
+            !super::file_menu_item_ids().contains(&"app-check-updates"),
+            "update checks belong in the LumenMark application menu, not File"
         );
         assert_eq!(
             super::theme_command_from_menu_id("theme-system"),
@@ -1709,6 +1814,10 @@ mod tests {
         assert_eq!(
             super::theme_command_from_menu_id("theme-system-dark"),
             Some("system-dark".to_string())
+        );
+        assert_eq!(
+            super::theme_command_from_menu_id("theme-official_github-dark-dimmed"),
+            Some("official:github-dark-dimmed".to_string())
         );
         assert_eq!(
             super::theme_command_from_menu_id("theme-imported_typora-newsprint"),

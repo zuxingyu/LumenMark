@@ -22,12 +22,15 @@ import {
 import { MarkdownPreview } from "./features/preview/MarkdownPreview";
 import {
   buildApplicationThemeCss,
+  buildOfficialThemeCss,
   loadThemePreference,
   resolveActiveTheme,
   saveThemePreference,
   scopeTyporaThemeCss,
   type ThemePreference,
 } from "./features/theme/theme";
+import { idleUpdateState, type UpdateState } from "./features/update/update-service";
+import { UpdateDialog } from "./features/update/UpdateDialog";
 import { initialLocale, LOCALE_KEY, messages, RECENT_WORKSPACES_KEY, type Locale } from "./i18n";
 import { createDemoApi, firstMarkdownPath, isTauriRuntime, tauriApi, type DesktopApi } from "./services/desktop";
 import type { DocumentSession, ImportedTheme, OpenedDocument, RecentWorkspace, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "./types";
@@ -98,6 +101,8 @@ export function App({ api: providedApi }: AppProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true");
   const [sidebarPanel, setSidebarPanel] = useState<"workspace" | "outline">("workspace");
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [updateVisible, setUpdateVisible] = useState(false);
+  const [updateState, setUpdateState] = useState<UpdateState>(idleUpdateState);
   const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference);
   const [previewThemePreference, setPreviewThemePreference] = useState<ThemePreference | null>(null);
   const [importedThemes, setImportedThemes] = useState<ImportedTheme[]>([]);
@@ -160,7 +165,11 @@ export function App({ api: providedApi }: AppProps) {
       document.head.append(style);
     }
     const importedCss = activeTheme.importedId ? importedThemeCss[activeTheme.importedId] ?? "" : "";
-    style.textContent = importedCss ? `${buildApplicationThemeCss(importedCss)}\n${scopeTyporaThemeCss(importedCss)}` : "";
+    if (activeTheme.officialId) {
+      style.textContent = buildOfficialThemeCss(activeTheme.officialId);
+    } else {
+      style.textContent = importedCss ? `${buildApplicationThemeCss(importedCss)}\n${scopeTyporaThemeCss(importedCss)}` : "";
+    }
   }, [activeTheme, importedThemeCss]);
 
   useEffect(() => {
@@ -235,6 +244,41 @@ export function App({ api: providedApi }: AppProps) {
     setImportedThemeCss((current) => ({ ...current, [imported.id]: imported.css }));
     setThemePreference(`imported:${imported.id}`);
     setStatus(locale === "zh-CN" ? `已导入主题 ${imported.name}` : `Imported theme ${imported.name}`);
+  }
+
+  async function checkForUpdates() {
+    setUpdateVisible(true);
+    setUpdateState({ kind: "checking", update: null, progress: 0 });
+    try {
+      const update = await api.checkForUpdate();
+      setUpdateState(update ? { kind: "available", update, progress: 0 } : idleUpdateState);
+    } catch (caught) {
+      setUpdateState({
+        kind: "error",
+        update: null,
+        progress: 0,
+        error: caught instanceof Error ? caught.message : String(caught),
+      });
+    }
+  }
+
+  async function installUpdate() {
+    const update = updateState.update;
+    if (!update) return;
+    setUpdateState({ kind: "downloading", update, progress: 0 });
+    try {
+      await api.downloadAndInstallUpdate((progress) => {
+        setUpdateState({ kind: "downloading", update, progress });
+      });
+      setUpdateState({ kind: "ready", update, progress: 100 });
+    } catch (caught) {
+      setUpdateState({
+        kind: "error",
+        update,
+        progress: 0,
+        error: caught instanceof Error ? caught.message : String(caught),
+      });
+    }
   }
 
   async function exportDocument(format: ExportFormat) {
@@ -599,11 +643,14 @@ export function App({ api: providedApi }: AppProps) {
     else if (command === "export-pdf") void attempt(() => exportDocument("pdf"));
     else if (command === "export-png") void attempt(() => exportDocument("png"));
     else if (command === "toggle-locale") changeLocale();
+    else if (command === "check-updates") void attempt(checkForUpdates);
     else if (command === "show-workspace-panel") setSidebarPanel("workspace");
     else if (command === "show-outline-panel") setSidebarPanel("outline");
     else if (command === "open-settings") setSettingsVisible(true);
     else if (command === "theme-system" || command === "theme-system-light" || command === "theme-system-dark") {
       selectTheme(command.replace("theme-", "") as ThemePreference);
+    } else if (command.startsWith("theme-official:")) {
+      selectTheme(`official:${command.slice("theme-official:".length)}` as ThemePreference);
     } else if (command.startsWith("theme-imported:")) {
       selectTheme(`imported:${command.slice("theme-imported:".length)}`);
     }
@@ -745,6 +792,15 @@ export function App({ api: providedApi }: AppProps) {
           onPreviewTheme={previewTheme}
           onCancelPreview={cancelThemePreview}
           onDeleteTheme={(themeId) => void attempt(() => deleteTheme(themeId))}
+        />
+      ) : null}
+      {updateVisible ? (
+        <UpdateDialog
+          labels={labels}
+          state={updateState}
+          onClose={() => setUpdateVisible(false)}
+          onInstall={() => void attempt(installUpdate)}
+          onRelaunch={() => void attempt(api.relaunchApp)}
         />
       ) : null}
     </div>

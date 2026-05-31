@@ -1,7 +1,7 @@
 import { Check, Eye, Trash2, X } from "lucide-react";
 import type { Messages } from "../i18n";
 import type { ImportedTheme } from "../types";
-import type { ThemePreference } from "../features/theme/theme";
+import { OFFICIAL_THEMES, type ThemePreference } from "../features/theme/theme";
 
 interface SettingsDialogProps {
   labels: Messages;
@@ -64,6 +64,22 @@ export function SettingsDialog({
           </div>
           <button type="button" className="primary compact-button" onClick={onImportTheme}>{labels.importTheme}</button>
           {previewTheme ? <button type="button" className="compact-button" onClick={onCancelPreview}>{labels.cancelThemePreview}</button> : null}
+        </div>
+        <div className="settings-section">
+          <h3>{labels.officialThemes}</h3>
+          <div className="theme-list">
+            {OFFICIAL_THEMES.map((theme) => {
+              const themeKey = `official:${theme.id}` as const;
+              return (
+                <div className={`theme-row ${activeOrPreview === themeKey ? "active" : ""}`} key={theme.id}>
+                  <span>{theme.name}</span>
+                  <button type="button" className="compact-button" onClick={() => onSelectTheme(themeKey)}>
+                    {labels.applyTheme}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
         <div className="settings-section">
           <h3>{labels.importedThemes}</h3>

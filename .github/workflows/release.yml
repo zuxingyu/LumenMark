@@ -41,30 +41,32 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: LumenMark ${{ github.ref_name }}
           releaseBody: |
-            ## LumenMark v0.3.10 更新内容
+            ## LumenMark v0.3.11 更新内容
 
             ### 新增与优化
-            - 导入主题现在会影响整个应用视觉，包括正文、代码块、公式/图表、侧栏、状态栏、弹窗和搜索框。
-            - 设置入口已从“文件”菜单移到应用级 `LumenMark` 菜单，文件菜单只保留文件生命周期操作。
-            - 设置弹窗重做为更紧凑的主题管理界面，支持导入主题的预览、应用和删除。
-            - 继续保留跟随系统、浅色主题、深色主题和已导入主题的原生“主题”菜单。
+            - 新增 `LumenMark > 检查更新...`，支持从 GitHub Release 检查签名更新、下载、安装并重启。
+            - 新增官方主题：GitHub Light、GitHub Dark Dimmed、GitHub Dark Colorblind、Oh My Zsh Dark、Monokai Terminal、Solarized Light、Lumen Paper、Lumen Ink。
+            - 主题菜单和设置弹窗现在同时展示内置主题、官方主题和导入主题。
+            - Release 现在生成 updater artifacts、签名文件和 `latest.json`，用于后续版本自动更新。
 
             ### BUG 修复
-            - 修复 GitHub Markdown / Typora 风格 CSS 导入后不生效的问题。
-            - 修复深色模式下代码块、LaTeX 公式块和代码块工具按钮仍可能出现白底的问题。
-            - 修复 LaTeX 块级公式无法像 Mermaid 一样点击预览后编辑源码的问题。
+            - 优化导入主题 CSS 兼容与变量推导，改善工作区、大纲、搜索框、状态栏和链接弹框在深色/导入主题下的可读性。
+            - 修复深色背景下 Mermaid journey、图片和图表预览标线不清的问题，预览内容使用高可读画布。
+            - Mermaid 主题不再直接照搬页面深色背景，节点、连线和文字使用独立高对比变量。
             - 继续阻止导入主题中的远程 URL、本地绝对路径、相对资源路径和 `@import`，避免公开项目泄露隐私路径。
 
             ### 测试结果
-            - 已执行前端单元与组件测试、生产构建、Rust/Tauri 命令测试。
-            - 已新增 `docs/qa/v0.3.10-regression-report.md`，记录自动化测试、手动 QA、主题导入检查与已知风险。
+            - 已执行前端单元与组件测试、生产构建、Rust/Tauri 命令测试和主题可读性检查。
+            - 已新增 `docs/qa/v0.3.11-regression-report.md`，记录自动化测试、主题可读性 QA、更新流程 QA 与已知风险。
 
             ### 后续规划
-            - v0.3.11-v0.3.13 将以主题兼容、编辑器稳定性、Markdown 语法和导出质量强化为主。
+            - v0.3.12-v0.3.13 将以编辑器稳定性、Markdown 语法和导出质量强化为主。
             - 中远期版本会支持导入完整 Typora 主题文件夹，包含 CSS、字体、图片等 assets 的复制、路径重写和安全校验。
 
             ### 发布说明

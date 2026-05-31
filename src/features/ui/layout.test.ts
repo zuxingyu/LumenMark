@@ -77,4 +77,12 @@ describe("application layout", () => {
     expect(cssRule(".theme-row")).toContain("background: var(--chrome)");
     expect(cssRule(".icon-button")).toContain("background: transparent");
   });
+
+  it("uses theme variables for link popovers, sidebar text, and readable diagram canvases", () => {
+    expect(styles).toContain(".crepe-root .link-tooltip");
+    expect(styles).toContain("background: var(--surface)");
+    expect(cssRule(".sidebar")).toContain("color: var(--text)");
+    expect(cssRule(".mermaid-preview, .mermaid-diagram")).toContain("background: var(--mermaid-preview-bg)");
+    expect(cssRule(".markdown-preview img")).toContain("background: var(--diagram-canvas)");
+  });
 });

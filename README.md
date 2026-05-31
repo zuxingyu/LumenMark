@@ -41,16 +41,16 @@ The sample workspace at `examples/workspace/architecture.md` exercises formulas,
 
 ## Releases
 
-Pushing the `v0.3.10` version tag creates a GitHub Release with:
+Pushing the `v0.3.11` version tag creates a GitHub Release with:
 
 - `LumenMark_<version>_x64-setup.exe` for Windows x64 (NSIS, per-user installation, bundled WebView2 offline installer).
 - `LumenMark_<version>_aarch64.dmg` for macOS Apple Silicon.
+- Signed updater artifacts and `latest.json` for in-app update checks.
 
-Version `v0.3.10` is a v0.3.9 hotfix that makes imported CSS themes affect the full app shell, moves Settings into the LumenMark application menu, adds compact theme preview/apply/delete controls, fixes GitHub Markdown CSS compatibility, and removes remaining white code and LaTeX formula surfaces in dark themes. It also lets block LaTeX previews reveal their source on click like Mermaid previews. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. macOS uses the system WebKit runtime, so the `.dmg` being much smaller than the Windows installer is expected; installation and launch do not download an additional runtime. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
+Version `v0.3.11` adds signed GitHub Release automatic updates through the LumenMark application menu, expands official themes with GitHub, terminal, Solarized, and Lumen writing styles, and strengthens theme readability across the app shell, workspace, outline, link popovers, Mermaid, and image/diagram canvases. These builds are test releases. The Windows installer is unsigned and includes the WebView2 offline installer so installation does not need to download it at install time. macOS uses the system WebKit runtime, so the `.dmg` being much smaller than the Windows installer is expected; installation and launch do not download an additional runtime. The macOS bundle receives an ad-hoc signature so Apple Silicon can validate its app bundle structure, but it is not notarized. Windows may show a SmartScreen warning. On macOS, use Finder's Open action or System Settings > Privacy & Security to allow the app on first launch.
 
 ## Roadmap
 
-- `v0.3.11`: Theme compatibility and import diagnostics.
 - `v0.3.12`: Editor stability and Markdown syntax regressions.
 - `v0.3.13`: PDF/PNG/HTML export quality hardening.
 - Mid-term: import complete Typora theme folders, including CSS, fonts, images, asset copying, path rewriting, and safety checks.

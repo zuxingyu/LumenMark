@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { Update } from "@tauri-apps/plugin-updater";
 import type { DocumentContent, ImportedTheme, OpenedDocument, ThemeImportResult, WorkspaceEntry, WorkspaceInfo, WorkspaceSearchResult } from "../types";
 import type { ThemePreference } from "../features/theme/theme";
+import type { UpdateInfo } from "../features/update/update-service";
 
 export interface DesktopApi {
   selectWorkspace(): Promise<WorkspaceInfo | null>;
@@ -22,7 +24,12 @@ export interface DesktopApi {
   readThemeCss(themeId: string): Promise<string>;
   deleteImportedTheme(themeId: string): Promise<{ success: boolean }>;
   setAppMenu(locale: "zh" | "en", themes: ImportedTheme[], activeThemeId: ThemePreference): Promise<{ success: boolean }>;
+  checkForUpdate(): Promise<UpdateInfo | null>;
+  downloadAndInstallUpdate(onProgress?: (progress: number) => void): Promise<void>;
+  relaunchApp(): Promise<void>;
 }
+
+let pendingUpdate: Update | null = null;
 
 export const tauriApi: DesktopApi = {
   selectWorkspace: () => invoke("select_workspace"),
@@ -45,6 +52,39 @@ export const tauriApi: DesktopApi = {
   readThemeCss: (themeId) => invoke("read_theme_css", { themeId }),
   deleteImportedTheme: (themeId) => invoke("delete_imported_theme", { themeId }),
   setAppMenu: (locale, themes, activeThemeId) => invoke("set_app_menu", { locale, themes, activeThemeId }),
+  checkForUpdate: async () => {
+    const { check } = await import("@tauri-apps/plugin-updater");
+    pendingUpdate = await check();
+    if (!pendingUpdate) return null;
+    return {
+      version: pendingUpdate.version,
+      date: pendingUpdate.date,
+      body: pendingUpdate.body,
+    };
+  },
+  downloadAndInstallUpdate: async (onProgress) => {
+    if (!pendingUpdate) {
+      const { check } = await import("@tauri-apps/plugin-updater");
+      pendingUpdate = await check();
+    }
+    if (!pendingUpdate) return;
+    let downloaded = 0;
+    let total = 0;
+    await pendingUpdate.downloadAndInstall((event) => {
+      if (event.event === "Started") {
+        total = event.data.contentLength ?? 0;
+      } else if (event.event === "Progress") {
+        downloaded += event.data.chunkLength;
+        if (total > 0) onProgress?.(Math.min(99, Math.round((downloaded / total) * 100)));
+      } else if (event.event === "Finished") {
+        onProgress?.(100);
+      }
+    });
+  },
+  relaunchApp: async () => {
+    const { relaunch } = await import("@tauri-apps/plugin-process");
+    await relaunch();
+  },
 };
 
 const sampleMarkdown = `# Service Deployment Notes
@@ -161,5 +201,8 @@ export function createDemoApi(): DesktopApi {
     readThemeCss: async () => "",
     deleteImportedTheme: async () => ({ success: true }),
     setAppMenu: async () => ({ success: true }),
+    checkForUpdate: async () => null,
+    downloadAndInstallUpdate: async () => undefined,
+    relaunchApp: async () => undefined,
   };
 }

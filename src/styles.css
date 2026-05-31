@@ -15,6 +15,8 @@
   --accent-soft: #e5eeff;
   --surface: #f7f8fb;
   --shadow: 0 14px 38px rgba(16, 24, 40, 0.05);
+  --diagram-canvas: #ffffff;
+  --mermaid-preview-bg: #ffffff;
   --code-bg: #f8fafc;
   --code-text: #0f172a;
   --code-caret: #111827;
@@ -54,6 +56,8 @@
     --accent-soft: #263754;
     --surface: #242830;
     --shadow: none;
+    --diagram-canvas: #f8fafc;
+    --mermaid-preview-bg: #f8fafc;
     --code-bg: #111827;
     --code-text: #e5e7eb;
     --code-caret: #f8fafc;
@@ -93,6 +97,8 @@
   --accent-soft: #263754;
   --surface: #242830;
   --shadow: none;
+  --diagram-canvas: #f8fafc;
+  --mermaid-preview-bg: #f8fafc;
   --code-bg: #111827;
   --code-text: #e5e7eb;
   --code-caret: #f8fafc;
@@ -195,6 +201,7 @@ button.primary:hover:not(:disabled) {
   padding: 22px 12px;
   overflow-y: auto;
   overflow-x: auto;
+  color: var(--text);
   border-right: 1px solid var(--border);
   background: var(--sidebar);
 }
@@ -819,6 +826,29 @@ button.primary:hover:not(:disabled) {
   color: var(--code-text);
 }
 
+.crepe-root .mermaid-preview,
+.crepe-root .mermaid-diagram,
+.mermaid-preview,
+.mermaid-diagram {
+  background: var(--mermaid-preview-bg);
+  color: #111827;
+}
+
+.mermaid-preview, .mermaid-diagram {
+  background: var(--mermaid-preview-bg);
+  color: #111827;
+}
+
+.crepe-root .link-tooltip,
+.crepe-root [data-milkdown-link-tooltip],
+.crepe-root [data-crepe-link-tooltip],
+.crepe-root .milkdown-link-tooltip {
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
 .crepe-root .milkdown-code-block .language-button,
 .crepe-root .milkdown-code-block .tools-button-group,
 .crepe-root .milkdown-code-block .code-block-tools,
@@ -986,6 +1016,9 @@ button.primary:hover:not(:disabled) {
 
 .markdown-preview img {
   max-width: 100%;
+  padding: 8px;
+  background: var(--diagram-canvas);
+  border-radius: 8px;
 }
 
 .image-loading,
@@ -1002,7 +1035,8 @@ button.primary:hover:not(:disabled) {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: var(--surface);
+  background: var(--mermaid-preview-bg);
+  color: #111827;
 }
 
 .mermaid-diagram svg {

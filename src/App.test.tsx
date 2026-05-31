@@ -40,6 +40,9 @@ const api: DesktopApi = {
   readThemeCss: async () => "",
   deleteImportedTheme: async () => ({ success: true }),
   setAppMenu: async () => ({ success: true }),
+  checkForUpdate: async () => null,
+  downloadAndInstallUpdate: async () => undefined,
+  relaunchApp: async () => undefined,
 };
 
 function dispatchAppCommand(command: string) {
@@ -350,6 +353,47 @@ describe("LumenMark app shell", () => {
 
     await waitFor(() => expect(deleteImportedTheme).toHaveBeenCalledWith("github-dark"));
     await waitFor(() => expect(localStorage.getItem("lumenmark.theme.active")).toBe("system"));
+  });
+
+  it("checks for updates from the app menu and installs before relaunching", async () => {
+    const checkForUpdate = vi.fn().mockResolvedValue({
+      version: "0.3.12",
+      date: "2026-06-01T00:00:00Z",
+      body: "主题和更新修复",
+    });
+    const downloadAndInstallUpdate = vi.fn().mockImplementation(async (onProgress?: (progress: number) => void) => {
+      onProgress?.(48);
+      onProgress?.(100);
+    });
+    const relaunchApp = vi.fn().mockResolvedValue(undefined);
+    render(<App api={{ ...api, checkForUpdate, downloadAndInstallUpdate, relaunchApp }} />);
+
+    dispatchAppCommand("check-updates");
+
+    expect(await screen.findByRole("dialog", { name: "软件更新" })).toBeVisible();
+    await waitFor(() => expect(screen.getByText(/发现新版本 0\.3\.12/)).toBeVisible());
+    fireEvent.click(screen.getByRole("button", { name: "下载并安装" }));
+
+    await waitFor(() => expect(downloadAndInstallUpdate).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText("更新已安装，准备重启。")).toBeVisible());
+    fireEvent.click(screen.getByRole("button", { name: "重启应用" }));
+    expect(relaunchApp).toHaveBeenCalled();
+  });
+
+  it("shows official themes in settings and switches them from menu commands", async () => {
+    render(<App api={api} />);
+
+    dispatchAppCommand("open-settings");
+
+    expect(await screen.findByText("GitHub Dark Dimmed")).toBeVisible();
+    expect(screen.getByText("Oh My Zsh Dark")).toBeVisible();
+    expect(screen.getByText("Lumen Ink")).toBeVisible();
+
+    dispatchAppCommand("theme-official:monokai-terminal");
+
+    await waitFor(() => expect(localStorage.getItem("lumenmark.theme.active")).toBe("official:monokai-terminal"));
+    expect(document.documentElement.dataset.themeMode).toBe("official");
+    expect(document.querySelector("#lumenmark-imported-theme")?.textContent).toContain("--mermaid-preview-bg");
   });
 
   it("opens file-name workspace search matches without showing a null line number", async () => {

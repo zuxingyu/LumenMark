@@ -3,6 +3,8 @@ import {
   ACTIVE_THEME_KEY,
   buildApplicationThemeCss,
   buildThemeMenuItems,
+  contrastRatio,
+  OFFICIAL_THEMES,
   resolveActiveTheme,
   sanitizeImportedThemeCss,
   scopeTyporaThemeCss,
@@ -18,7 +20,31 @@ describe("theme preferences and Typora CSS handling", () => {
       "system",
       "system-light",
       "system-dark",
+      "official:github-light",
+      "official:github-dark-dimmed",
+      "official:github-dark-colorblind",
+      "official:oh-my-zsh-dark",
+      "official:monokai-terminal",
+      "official:solarized-light",
+      "official:lumen-paper",
+      "official:lumen-ink",
     ]);
+  });
+
+  it("resolves official themes and keeps app shell text readable", () => {
+    const github = resolveActiveTheme([], false, "official:github-dark-dimmed");
+
+    expect(github.id).toBe("official:github-dark-dimmed");
+    expect(github.mode).toBe("official");
+    expect(github.officialId).toBe("github-dark-dimmed");
+
+    for (const theme of OFFICIAL_THEMES) {
+      expect(contrastRatio(theme.variables["--text"], theme.variables["--page"])).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(theme.variables["--text"], theme.variables["--sidebar"])).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(theme.variables["--accent"], theme.variables["--page"])).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(theme.mermaid.textColor, theme.mermaid.background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(theme.mermaid.primaryTextColor, theme.mermaid.primaryColor)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it("sanitizes imported CSS to avoid external resource and local path leaks", () => {
